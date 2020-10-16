@@ -1,8 +1,17 @@
+from enum import Enum
+
 from PySide2.QtWidgets import QApplication, QMainWindow, QGraphicsScene, QPushButton, \
     QGraphicsView, QGraphicsItem, QLabel, QGraphicsLineItem, QGraphicsRectItem, QGraphicsEllipseItem
 from PySide2.QtGui import QBrush, QPen, QFont
 from PySide2.QtCore import Qt, QRect, QPoint
 import sys
+
+
+class ToolSelect(Enum):
+    Select = 0
+    Line = 1
+    Rectangle = 2
+    Ellipse = 3
 
 
 class Window(QMainWindow):
@@ -13,7 +22,8 @@ class Window(QMainWindow):
     mouse_cords = QPoint(0, 0)
     start_point_cords = QPoint(0, 0)
     end_point_cords = QPoint(0, 0)
-
+    # selected tool
+    selected_tool = ToolSelect.Select.value
     def __init__(self):
         super().__init__()
         self.setWindowTitle("PaintApp")
@@ -27,42 +37,45 @@ class Window(QMainWindow):
         self.graphics_view = GraphicsView(self)
         self.graphics_view.setGeometry(200, 10, self.graphic_view_width, self.graphic_view_height)
 
-
         # buttons
-        button = QPushButton("Rotate - ", self)
-        button.setGeometry(200, 450, 100, 50)
-        button.clicked.connect(self.rotate_minus)
+        select_button = QPushButton("S", self)
+        select_button.setGeometry(20, 10, 30, 30)
+        select_button.clicked.connect(self.selectItem)
 
-        button2 = QPushButton("Rotate + ", self)
-        button2.setGeometry(320, 450, 100, 50)
-        button2.clicked.connect(self.rotate_plus)
+        line_button = QPushButton("L", self)
+        line_button.setGeometry(60, 10, 30, 30)
+        line_button.clicked.connect(self.drawLine)
+
+        rect_button = QPushButton("R", self)
+        rect_button.setGeometry(100, 10, 30, 30)
+        rect_button.clicked.connect(self.drawRect)
+
+        ellipse_button = QPushButton("E", self)
+        ellipse_button.setGeometry(140, 10, 30, 30)
+        ellipse_button.clicked.connect(self.drawEllipse)
 
         # labels
         self.mouse_cord_label = QLabel(self)
         self.mouse_cord_label.setGeometry(QRect(950, 440, 100, 50))
         self.mouse_cord_label.setText("(x: {}, y: {})".format(self.mouse_cords.x(), self.mouse_cords.y()))
 
-    def rotate_minus(self):
-        self.graphics_view.rotate(-14)
+    def drawLine(self):
+        self.selected_tool = ToolSelect.Line.value
 
-    def rotate_plus(self):
-        self.graphics_view.rotate(14)
+    def drawRect(self):
+        self.selected_tool = ToolSelect.Rectangle.value
+
+    def drawEllipse(self):
+        self.selected_tool = ToolSelect.Ellipse.value
+
+    def selectItem(self):
+        self.selected_tool = ToolSelect.Select.value
 
 
 class GraphicsView(QGraphicsView):
-    siema = "sdadsadasd"
     def __init__(self, parent=None):
         super(GraphicsView, self).__init__(parent)
         self.setup_ui()
-
-        blueBrush = QBrush(Qt.blue)
-        blackPen = QPen(Qt.black)
-        blackPen.setWidth(5)
-        ellipse = self.scene.addEllipse(10, 10, 200, 200, blackPen)
-        rect = self.scene.addRect(0, 0, 200, 200, blackPen, blueBrush)
-        line = self.scene.addLine(10, 300, 300, 350, blackPen)
-        ellipse.setFlag(QGraphicsItem.ItemIsMovable)
-        rect.setFlag(QGraphicsItem.ItemIsMovable)
 
     def setup_ui(self):
         # scene setup
@@ -83,21 +96,24 @@ class GraphicsView(QGraphicsView):
     def mousePressEvent(self, event):
         mouse_cord = event.pos()
         self.parent().start_point_cords = mouse_cord
-        print(self.parent().start_point_cords)
         super(GraphicsView, self).mousePressEvent(event)
 
     def mouseReleaseEvent(self, event):
         mouse_cord = event.pos()
         self.parent().end_point_cords = mouse_cord
-        print(self.parent().end_point_cords)
         self.draw()
         super(GraphicsView, self).mouseReleaseEvent(event)
 
     def draw(self):
-        print(self.scene)
-        #Line(self.scene, self.parent().start_point_cords, self.parent().end_point_cords)
-        #Rectangle(self.scene, self.parent().start_point_cords, self.parent().end_point_cords)
-        Ellipse(self.scene, self.parent().start_point_cords, self.parent().end_point_cords)
+        selected_tool = self.parent().selected_tool
+        if selected_tool == ToolSelect.Select.value:
+            pass
+        elif selected_tool == ToolSelect.Line.value:
+            Line(self.scene, self.parent().start_point_cords, self.parent().end_point_cords)
+        elif selected_tool == ToolSelect.Rectangle.value:
+            Rectangle(self.scene, self.parent().start_point_cords, self.parent().end_point_cords)
+        elif selected_tool == ToolSelect.Ellipse.value:
+            Ellipse(self.scene, self.parent().start_point_cords, self.parent().end_point_cords)
 
 
 class Line(QGraphicsItem):
@@ -160,7 +176,9 @@ class Ellipse(QGraphicsItem):
             self.ellipse.setFlag(QGraphicsItem.ItemIsMovable)
             scene.addItem(self.ellipse)
 
-            
+
+
+
 app = QApplication(sys.argv)
 window = Window()
 sys.exit(app.exec_())
