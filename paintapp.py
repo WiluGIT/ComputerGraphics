@@ -1,15 +1,19 @@
 from PySide2.QtWidgets import QApplication, QMainWindow, QGraphicsScene, QPushButton, \
     QGraphicsView, QGraphicsItem, QLabel
 from PySide2.QtGui import QBrush, QPen, QFont
-from PySide2.QtCore import Qt, QRect, Signal
+from PySide2.QtCore import Qt, QRect, QPoint
 import sys
 
 
 class Window(QMainWindow):
+    # consts
     graphic_view_width = 840
     graphic_view_height = 440
-    mouse_x_cord = "0"
-    mouse_y_cord = "0"
+    # mouse cords
+    mouse_cords = QPoint(0, 0)
+    start_point_cords = QPoint(0, 0)
+    end_point_cords = QPoint(0, 0)
+
     def __init__(self):
         super().__init__()
         self.setWindowTitle("PaintApp")
@@ -48,16 +52,14 @@ class Window(QMainWindow):
 
         # labels
         self.mouse_cord_label = QLabel(self)
-        self.mouse_cord_label.setGeometry(QRect(10, 10, 100, 100))
-        self.mouse_cord_label.setText("(x: {}, y: {})".format(self.mouse_x_cord, self.mouse_y_cord))
-
+        self.mouse_cord_label.setGeometry(QRect(950, 440, 100, 50))
+        self.mouse_cord_label.setText("(x: {}, y: {})".format(self.mouse_cords.x(), self.mouse_cords.y()))
 
     def rotate_minus(self):
         self.graphics_view.rotate(-14)
 
     def rotate_plus(self):
         self.graphics_view.rotate(14)
-        print(self.graphics_view.siema)
 
 
 class GraphicsView(QGraphicsView):
@@ -66,10 +68,23 @@ class GraphicsView(QGraphicsView):
 
     def mouseMoveEvent(self, event):
         mouse_cord = event.pos()
-        self.parent().mouse_x_cord = str(mouse_cord.x())
-        self.parent().mouse_y_cord = str(mouse_cord.y())
-        self.parent().mouse_cord_label.setText("(x: {}, y: {})".format(self.parent().mouse_x_cord, self.parent().mouse_y_cord))
+        self.parent().mouse_cords = mouse_cord
+        self.parent().mouse_cord_label.setText("(x: {}, y: {})".format(self.parent().mouse_cords.x(), self.parent().mouse_cords.y()))
         super(GraphicsView, self).mouseMoveEvent(event)
+
+    def mousePressEvent(self, event):
+        mouse_cord = event.pos()
+        self.parent().start_point_cords = mouse_cord
+        print(self.parent().start_point_cords)
+        super(GraphicsView, self).mousePressEvent(event)
+
+    def mouseReleaseEvent(self, event):
+        mouse_cord = event.pos()
+        self.parent().end_point_cords = mouse_cord
+        print(self.parent().end_point_cords)
+        super(GraphicsView, self).mouseReleaseEvent(event)
+
+
 
 app = QApplication(sys.argv)
 window = Window()
