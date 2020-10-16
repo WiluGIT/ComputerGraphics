@@ -1,5 +1,5 @@
 from PySide2.QtWidgets import QApplication, QMainWindow, QGraphicsScene, QPushButton, \
-    QGraphicsView, QGraphicsItem, QLabel, QGraphicsLineItem
+    QGraphicsView, QGraphicsItem, QLabel, QGraphicsLineItem, QGraphicsRectItem
 from PySide2.QtGui import QBrush, QPen, QFont
 from PySide2.QtCore import Qt, QRect, QPoint
 import sys
@@ -89,12 +89,14 @@ class GraphicsView(QGraphicsView):
     def mouseReleaseEvent(self, event):
         mouse_cord = event.pos()
         self.parent().end_point_cords = mouse_cord
+        print(self.parent().end_point_cords)
         self.draw()
         super(GraphicsView, self).mouseReleaseEvent(event)
 
     def draw(self):
         print(self.scene)
-        Line(self.scene, self.parent().start_point_cords, self.parent().end_point_cords)
+        #Line(self.scene, self.parent().start_point_cords, self.parent().end_point_cords)
+        Rectangle(self.scene, self.parent().start_point_cords, self.parent().end_point_cords)
 
 
 class Line(QGraphicsItem):
@@ -106,8 +108,33 @@ class Line(QGraphicsItem):
         self.line.setFlag(QGraphicsItem.ItemIsMovable)
         scene.addItem(self.line)
 
+class Rectangle(QGraphicsItem):
+    def __init__(self, scene, start_cord, end_cord):
+        blackPen = QPen(Qt.black)
+        blackPen.setWidth(10)
+        x1 = start_cord.x()
+        y1 = start_cord.y()
+        x2 = end_cord.x()
+        y2 = end_cord.y()
+        width = abs(x1 - x2)
+        height = abs(y1 - y2)
 
+        if (x1 <= x2) & (y1 <= y2):
+            self.rectangle = QGraphicsRectItem(x1, y1, width, height)
+            print(1)
+        elif (x1 >= x2) & (y1 <= y2):
+            self.rectangle = QGraphicsRectItem(x2, y2 - height, width, height)
+            print(2)
+        elif (x1 >= x2) & (y1 >= y2):
+            self.rectangle = QGraphicsRectItem(x2, y2, width, height)
+            print(3)
+        elif (x1 <= x2) & (y1 >= y2):
+            self.rectangle = QGraphicsRectItem(x1, y1 - height, width, height)
+            print(4)
 
+        self.rectangle.setPen(blackPen)
+        self.rectangle.setFlag(QGraphicsItem.ItemIsMovable)
+        scene.addItem(self.rectangle)
 
 app = QApplication(sys.argv)
 window = Window()
