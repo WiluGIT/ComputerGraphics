@@ -103,6 +103,7 @@ class GraphicsView(QGraphicsView):
         mouse_cord = event.pos()
         self.parent().end_point_cords = mouse_cord
         self.draw()
+        self.resize()
         super(GraphicsView, self).mouseReleaseEvent(event)
 
     def draw(self):
@@ -139,6 +140,12 @@ class GraphicsView(QGraphicsView):
             self.selected_item[0].setFlag(QGraphicsItem.ItemIsSelectable, True)
             self.selected_item = None
 
+    def resize(self):
+        selected_item = self.scene.selectedItems()
+        print(selected_item[0])
+
+        print(selected_item[0].pos())
+        #selected_item[0].setRect(0, 0 , 100, 100)
 
 class Line(QGraphicsItem):
     def __init__(self, scene, start_cord, end_cord):
@@ -176,6 +183,7 @@ class Rectangle(QGraphicsItem):
             self.rectangle.setFlag(QGraphicsItem.ItemIsMovable)
             self.rectangle.setFlag(QGraphicsItem.ItemIsSelectable)
             scene.addItem(self.rectangle)
+
 
 class Ellipse(QGraphicsItem):
     def __init__(self, scene, start_cord, end_cord):
