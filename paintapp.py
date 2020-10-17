@@ -73,6 +73,7 @@ class Window(QMainWindow):
 
 
 class GraphicsView(QGraphicsView):
+    selected_item = None
     def __init__(self, parent=None):
         super(GraphicsView, self).__init__(parent)
         self.setup_ui()
@@ -106,14 +107,37 @@ class GraphicsView(QGraphicsView):
 
     def draw(self):
         selected_tool = self.parent().selected_tool
-        if selected_tool == ToolSelect.Select.value:
-            pass
-        elif selected_tool == ToolSelect.Line.value:
-            Line(self.scene, self.parent().start_point_cords, self.parent().end_point_cords)
-        elif selected_tool == ToolSelect.Rectangle.value:
-            Rectangle(self.scene, self.parent().start_point_cords, self.parent().end_point_cords)
-        elif selected_tool == ToolSelect.Ellipse.value:
-            Ellipse(self.scene, self.parent().start_point_cords, self.parent().end_point_cords)
+        selected_item = self.scene.selectedItems()
+
+        if len(selected_item) == 0:
+            if selected_tool == ToolSelect.Select.value:
+                pass
+            elif selected_tool == ToolSelect.Line.value:
+                Line(self.scene, self.parent().start_point_cords, self.parent().end_point_cords)
+            elif selected_tool == ToolSelect.Rectangle.value:
+                Rectangle(self.scene, self.parent().start_point_cords, self.parent().end_point_cords)
+            elif selected_tool == ToolSelect.Ellipse.value:
+                Ellipse(self.scene, self.parent().start_point_cords, self.parent().end_point_cords)
+            else:
+                pass
+
+    def preventMove(self):
+        item = self.scene.selectedItems()
+        self.selected_item = item
+        selected_tool = self.parent().selected_tool
+        print(item)
+        if len(item) == 1:
+            if selected_tool != ToolSelect.Select.value:
+                self.selected_item[0].setFlag(QGraphicsItem.ItemIsMovable, False)
+                self.selected_item[0].setFlag(QGraphicsItem.ItemIsSelectable, False)
+                self.selected_item = None
+
+    def enableMove(self):
+        print(self.selected_item)
+        if len(self.selected_item) == 1:
+            self.selected_item[0].setFlag(QGraphicsItem.ItemIsMovable, True)
+            self.selected_item[0].setFlag(QGraphicsItem.ItemIsSelectable, True)
+            self.selected_item = None
 
 
 class Line(QGraphicsItem):
@@ -123,6 +147,7 @@ class Line(QGraphicsItem):
         self.line = QGraphicsLineItem(start_cord.x(), start_cord.y(), end_cord.x(), end_cord.y())
         self.line.setPen(blackPen)
         self.line.setFlag(QGraphicsItem.ItemIsMovable)
+        self.line.setFlag(QGraphicsItem.ItemIsSelectable)
         scene.addItem(self.line)
 
 
@@ -149,6 +174,7 @@ class Rectangle(QGraphicsItem):
         if self.rectangle is not None:
             self.rectangle.setPen(blackPen)
             self.rectangle.setFlag(QGraphicsItem.ItemIsMovable)
+            self.rectangle.setFlag(QGraphicsItem.ItemIsSelectable)
             scene.addItem(self.rectangle)
 
 class Ellipse(QGraphicsItem):
@@ -174,9 +200,8 @@ class Ellipse(QGraphicsItem):
         if self.ellipse is not None:
             self.ellipse.setPen(blackPen)
             self.ellipse.setFlag(QGraphicsItem.ItemIsMovable)
+            self.ellipse.setFlag(QGraphicsItem.ItemIsSelectable)
             scene.addItem(self.ellipse)
-
-
 
 
 app = QApplication(sys.argv)
