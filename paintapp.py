@@ -3,7 +3,7 @@ from enum import Enum
 from PySide2.QtWidgets import QApplication, QMainWindow, QGraphicsScene, QPushButton, \
     QGraphicsView, QGraphicsItem, QLabel, QGraphicsLineItem, QGraphicsRectItem, QGraphicsEllipseItem, QGraphicsObject
 from PySide2.QtGui import QBrush, QPen, QFont, QPainter, QColor
-from PySide2.QtCore import Qt, QRect, QPoint, Signal, QPointF, QRectF, Slot
+from PySide2.QtCore import Qt, QRect, QPoint, Signal, QPointF, QRectF, Slot, QLineF
 from PySide2 import QtCore
 import sys
 
@@ -114,7 +114,7 @@ class GraphicsView(QGraphicsView):
             if selected_tool == ToolSelect.Select.value:
                 pass
             elif selected_tool == ToolSelect.Line.value:
-                Line(self.scene, self.parent().start_point_cords, self.parent().end_point_cords)
+                self.drawLineLogic()
             elif selected_tool == ToolSelect.Rectangle.value:
                 self.drawRectangleLogic()
             elif selected_tool == ToolSelect.Ellipse.value:
@@ -149,32 +149,43 @@ class GraphicsView(QGraphicsView):
 
         if (x1 <= x2) & (y1 <= y2):
             self.scene.addItem(Ellipse(QRectF(x1, y1, width, height), self.scene))
-
-            #self.ellipse = QGraphicsEllipseItem(x1, y1, width, height)
         elif (x1 >= x2) & (y1 <= y2):
             self.scene.addItem(Ellipse(QRectF(x2, y2 - height, width, height), self.scene))
-
-            #self.ellipse = QGraphicsEllipseItem(x2, y2 - height, width, height)
         elif (x1 >= x2) & (y1 >= y2):
             self.scene.addItem(Ellipse(QRectF(x2, y2, width, height), self.scene))
-
-            #self.ellipse = QGraphicsEllipseItem(x2, y2, width, height)
         elif (x1 <= x2) & (y1 >= y2):
             self.scene.addItem(Ellipse(QRectF(x1, y1 - height, width, height), self.scene))
 
-            #self.ellipse = QGraphicsEllipseItem(x1, y1 - height, width, height)
+    def drawLineLogic(self):
+        x1 = self.parent().start_point_cords.x()
+        y1 = self.parent().start_point_cords.y()
+        x2 = self.parent().end_point_cords.x()
+        y2 = self.parent().end_point_cords.y()
+
+        line = Line(QLineF(x1, y1, x2, y2), self.scene)
+        self.scene.addItem(line)
 
 
+class Line(QGraphicsLineItem):
+    def __init__(self, line=QLineF(0, 0, 100, 100), scene=None, parent=None):
+        super().__init__(line, parent)
+        self.setFlag(QGraphicsItem.ItemIsSelectable, True)
+        self.setFlag(QGraphicsItem.ItemIsMovable, True)
+        self.setFlag(QGraphicsItem.ItemIsFocusable, True)
+        self.setFlag(QGraphicsItem.ItemSendsGeometryChanges, True)
 
-class Line(QGraphicsItem):
-    def __init__(self, scene, start_cord, end_cord):
-        blackPen = QPen(Qt.black)
-        blackPen.setWidth(10)
-        self.line = QGraphicsLineItem(start_cord.x(), start_cord.y(), end_cord.x(), end_cord.y())
-        self.line.setPen(blackPen)
-        self.line.setFlag(QGraphicsItem.ItemIsMovable)
-        self.line.setFlag(QGraphicsItem.ItemIsSelectable)
-        scene.addItem(self.line)
+        self.resizer = Resizer(parent=self)
+        resizerWidth = self.resizer.rect.width() / 2
+        resizerOffset = QPointF(resizerWidth, resizerWidth)
+        self.resizer.setPos(self.line().p2() - resizerOffset)
+        self.resizer.resizeSignal.connect(self.resizeRec)
+
+    @QtCore.Slot(QGraphicsObject)
+    def resizeRec(self, change):
+        self.setLine(self.line().x1(), self.line().y1(), self.line().x2() + change.x(), self.line().y2() + change.y())
+        self.setLine()
+        self.prepareGeometryChange()
+        self.update()
 
 
 class Rectangle(QGraphicsRectItem):
@@ -219,7 +230,6 @@ class Ellipse(QGraphicsEllipseItem):
         self.setRect(self.rect().adjusted(0, 0, change.x(), change.y()))
         self.prepareGeometryChange()
         self.update()
-
 
 
 class Resizer(QGraphicsObject):
