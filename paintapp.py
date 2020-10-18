@@ -1,9 +1,10 @@
 from enum import Enum
 
 from PySide2.QtWidgets import QApplication, QMainWindow, QGraphicsScene, QPushButton, \
-    QGraphicsView, QGraphicsItem, QLabel, QGraphicsLineItem, QGraphicsRectItem, QGraphicsEllipseItem
-from PySide2.QtGui import QBrush, QPen, QFont
-from PySide2.QtCore import Qt, QRect, QPoint
+    QGraphicsView, QGraphicsItem, QLabel, QGraphicsLineItem, QGraphicsRectItem, QGraphicsEllipseItem, QGraphicsObject
+from PySide2.QtGui import QBrush, QPen, QFont, QPainter, QColor
+from PySide2.QtCore import Qt, QRect, QPoint, Signal, QPointF, QRectF, Slot
+from PySide2 import QtCore
 import sys
 
 
@@ -103,7 +104,6 @@ class GraphicsView(QGraphicsView):
         mouse_cord = event.pos()
         self.parent().end_point_cords = mouse_cord
         self.draw()
-        self.resize()
         super(GraphicsView, self).mouseReleaseEvent(event)
 
     def draw(self):
@@ -116,36 +116,29 @@ class GraphicsView(QGraphicsView):
             elif selected_tool == ToolSelect.Line.value:
                 Line(self.scene, self.parent().start_point_cords, self.parent().end_point_cords)
             elif selected_tool == ToolSelect.Rectangle.value:
-                Rectangle(self.scene, self.parent().start_point_cords, self.parent().end_point_cords)
+                self.drawRectangleLogic()
             elif selected_tool == ToolSelect.Ellipse.value:
                 Ellipse(self.scene, self.parent().start_point_cords, self.parent().end_point_cords)
             else:
                 pass
 
-    def preventMove(self):
-        item = self.scene.selectedItems()
-        self.selected_item = item
-        selected_tool = self.parent().selected_tool
-        print(item)
-        if len(item) == 1:
-            if selected_tool != ToolSelect.Select.value:
-                self.selected_item[0].setFlag(QGraphicsItem.ItemIsMovable, False)
-                self.selected_item[0].setFlag(QGraphicsItem.ItemIsSelectable, False)
-                self.selected_item = None
+    def drawRectangleLogic(self):
+        x1 = self.parent().start_point_cords.x()
+        y1 = self.parent().start_point_cords.y()
+        x2 = self.parent().end_point_cords.x()
+        y2 = self.parent().end_point_cords.y()
+        width = abs(x1 - x2)
+        height = abs(y1 - y2)
 
-    def enableMove(self):
-        print(self.selected_item)
-        if len(self.selected_item) == 1:
-            self.selected_item[0].setFlag(QGraphicsItem.ItemIsMovable, True)
-            self.selected_item[0].setFlag(QGraphicsItem.ItemIsSelectable, True)
-            self.selected_item = None
+        if (x1 <= x2) & (y1 <= y2):
+            self.scene.addItem(Rectangle(QRectF(x1, y1, width, height), self.scene))
+        elif (x1 >= x2) & (y1 <= y2):
+            self.scene.addItem(Rectangle(QRectF(x2, y2 - height, width, height), self.scene))
+        elif (x1 >= x2) & (y1 >= y2):
+            self.scene.addItem(Rectangle(QRectF(x2, y2, width, height), self.scene))
+        elif (x1 <= x2) & (y1 >= y2):
+            self.scene.addItem(Rectangle(QRectF(x1, y1 - height, width, height), self.scene))
 
-    def resize(self):
-        selected_item = self.scene.selectedItems()
-        print(selected_item[0])
-
-        print(selected_item[0].pos())
-        #selected_item[0].setRect(0, 0 , 100, 100)
 
 class Line(QGraphicsItem):
     def __init__(self, scene, start_cord, end_cord):
@@ -158,31 +151,26 @@ class Line(QGraphicsItem):
         scene.addItem(self.line)
 
 
-class Rectangle(QGraphicsItem):
-    def __init__(self, scene, start_cord, end_cord):
-        blackPen = QPen(Qt.black)
-        blackPen.setWidth(10)
-        x1 = start_cord.x()
-        y1 = start_cord.y()
-        x2 = end_cord.x()
-        y2 = end_cord.y()
-        width = abs(x1 - x2)
-        height = abs(y1 - y2)
+class Rectangle(QGraphicsRectItem):
+    def __init__(self, rect=QRectF(0, 0, 100, 50), scene=None, parent=None):
+        super().__init__(rect, parent)
 
-        if (x1 <= x2) & (y1 <= y2):
-            self.rectangle = QGraphicsRectItem(x1, y1, width, height)
-        elif (x1 >= x2) & (y1 <= y2):
-            self.rectangle = QGraphicsRectItem(x2, y2 - height, width, height)
-        elif (x1 >= x2) & (y1 >= y2):
-            self.rectangle = QGraphicsRectItem(x2, y2, width, height)
-        elif (x1 <= x2) & (y1 >= y2):
-            self.rectangle = QGraphicsRectItem(x1, y1 - height, width, height)
+        self.setFlag(QGraphicsItem.ItemIsSelectable, True)
+        self.setFlag(QGraphicsItem.ItemIsMovable, True)
+        self.setFlag(QGraphicsItem.ItemIsFocusable, True)
+        self.setFlag(QGraphicsItem.ItemSendsGeometryChanges, True)
 
-        if self.rectangle is not None:
-            self.rectangle.setPen(blackPen)
-            self.rectangle.setFlag(QGraphicsItem.ItemIsMovable)
-            self.rectangle.setFlag(QGraphicsItem.ItemIsSelectable)
-            scene.addItem(self.rectangle)
+        self.resizer = Resizer(parent=self)
+        resizerWidth = self.resizer.rect.width() / 2
+        resizerOffset = QPointF(resizerWidth, resizerWidth)
+        self.resizer.setPos(self.rect().bottomRight() - resizerOffset)
+        self.resizer.resizeSignal.connect(self.resizeRec)
+
+    @QtCore.Slot(QGraphicsObject)
+    def resizeRec(self, change):
+        self.setRect(self.rect().adjusted(0, 0, change.x(), change.y()))
+        self.prepareGeometryChange()
+        self.update()
 
 
 class Ellipse(QGraphicsItem):
@@ -210,6 +198,34 @@ class Ellipse(QGraphicsItem):
             self.ellipse.setFlag(QGraphicsItem.ItemIsMovable)
             self.ellipse.setFlag(QGraphicsItem.ItemIsSelectable)
             scene.addItem(self.ellipse)
+
+
+class Resizer(QGraphicsObject):
+    resizeSignal = QtCore.Signal(QPointF)
+
+    def __init__(self, rect=QRectF(0, 0, 10, 10), parent=None):
+        super().__init__(parent)
+        self.setFlag(QGraphicsItem.ItemIsMovable, True)
+        self.setFlag(QGraphicsItem.ItemIsSelectable, True)
+        self.setFlag(QGraphicsItem.ItemSendsGeometryChanges, True)
+        self.rect = rect
+
+    def boundingRect(self):
+        return self.rect
+
+    def paint(self, painter, option, widget=None):
+        if self.isSelected():
+            painter.setRenderHint(QPainter.Antialiasing)
+            painter.setBrush(QBrush(QColor(255, 0, 0, 255)))
+            painter.setPen(QPen(QColor(0, 0, 0, 255), 1.0, Qt.SolidLine, Qt.RoundCap, Qt.RoundJoin))
+        painter.drawEllipse(self.rect)
+
+    def itemChange(self, change, value):
+        if change == QGraphicsItem.ItemPositionChange:
+            if self.isSelected():
+                self.resizeSignal.emit(value - self.pos())
+        return value
+
 
 
 app = QApplication(sys.argv)
