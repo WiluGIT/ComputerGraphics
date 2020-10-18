@@ -13,6 +13,7 @@ class ToolSelect(Enum):
     Line = 1
     Rectangle = 2
     Ellipse = 3
+    Resize = 4
 
 
 class Window(QMainWindow):
@@ -55,6 +56,10 @@ class Window(QMainWindow):
         ellipse_button.setGeometry(140, 10, 30, 30)
         ellipse_button.clicked.connect(self.drawEllipse)
 
+        resize_button = QPushButton("Re", self)
+        resize_button.setGeometry(20, 60, 30, 30)
+        resize_button.clicked.connect(self.resizeItem)
+
         # labels
         self.mouse_cord_label = QLabel(self)
         self.mouse_cord_label.setGeometry(QRect(950, 440, 100, 50))
@@ -72,6 +77,8 @@ class Window(QMainWindow):
     def selectItem(self):
         self.selected_tool = ToolSelect.Select.value
 
+    def resizeItem(self):
+        self.selected_tool = ToolSelect.Resize.value
 
 class GraphicsView(QGraphicsView):
     selected_item = None
@@ -87,6 +94,7 @@ class GraphicsView(QGraphicsView):
         self.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         self.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         self.setMouseTracking(True)
+        self.scene.selectionChanged.connect(self.selectionChanged)
 
     def mouseMoveEvent(self, event):
         mouse_cord = event.pos()
@@ -121,6 +129,24 @@ class GraphicsView(QGraphicsView):
                 self.drawEllipseLogic()
             else:
                 pass
+
+    def selectionChanged(self):
+        selectedItems = self.scene.selectedItems()
+        selected_tool = self.parent().selected_tool
+        print(selectedItems)
+        if (len(selectedItems) == 1) & (selected_tool == ToolSelect.Select.value):
+            obj_type = type(selectedItems[0])
+            print(obj_type)
+            if (obj_type == Rectangle) | (obj_type == Line) | (obj_type == Ellipse):
+                self.selected_item = selectedItems[0]
+
+            if (obj_type == Rectangle) | (obj_type == Line) | (obj_type == Ellipse):
+                self.selected_item.resizerVisibilityChange(True)
+        elif len(selectedItems) == 0:
+            obj_type = type(self.selected_item)
+            if (obj_type == Rectangle) | (obj_type == Line) | (obj_type == Ellipse):
+                self.selected_item.resizerVisibilityChange(False)
+                self.selected_item = None
 
     def drawRectangleLogic(self):
         x1 = self.parent().start_point_cords.x()
@@ -167,6 +193,7 @@ class GraphicsView(QGraphicsView):
 
 
 class Line(QGraphicsLineItem):
+    resizerVisibility = False
     def __init__(self, line=QLineF(0, 0, 100, 100), scene=None, parent=None):
         super().__init__(line, parent)
         self.setFlag(QGraphicsItem.ItemIsSelectable, True)
@@ -178,12 +205,12 @@ class Line(QGraphicsLineItem):
         resizerWidth = self.resizer.rect.width() / 2
         resizerOffset = QPointF(resizerWidth, resizerWidth)
         self.resizer.setPos(self.line().p2() - resizerOffset)
-        self.resizer.resizeSignal.connect(self.resizeRec)
+        self.resizer.resizeSignal.connect(self.resizeLine)
+
 
     @QtCore.Slot(QGraphicsObject)
-    def resizeRec(self, change):
+    def resizeLine(self, change):
         self.setLine(self.line().x1(), self.line().y1(), self.line().x2() + change.x(), self.line().y2() + change.y())
-        self.setLine()
         self.prepareGeometryChange()
         self.update()
 
@@ -201,6 +228,7 @@ class Rectangle(QGraphicsRectItem):
         resizerWidth = self.resizer.rect.width() / 2
         resizerOffset = QPointF(resizerWidth, resizerWidth)
         self.resizer.setPos(self.rect().bottomRight() - resizerOffset)
+        self.resizer.setVisible(False)
         self.resizer.resizeSignal.connect(self.resizeRec)
 
     @QtCore.Slot(QGraphicsObject)
@@ -208,6 +236,10 @@ class Rectangle(QGraphicsRectItem):
         self.setRect(self.rect().adjusted(0, 0, change.x(), change.y()))
         self.prepareGeometryChange()
         self.update()
+
+    def resizerVisibilityChange(self, visibleFlag):
+        self.resizer.setVisible(visibleFlag)
+
 
 
 class Ellipse(QGraphicsEllipseItem):
@@ -257,7 +289,6 @@ class Resizer(QGraphicsObject):
             if self.isSelected():
                 self.resizeSignal.emit(value - self.pos())
         return value
-
 
 
 app = QApplication(sys.argv)
