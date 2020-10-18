@@ -118,7 +118,7 @@ class GraphicsView(QGraphicsView):
             elif selected_tool == ToolSelect.Rectangle.value:
                 self.drawRectangleLogic()
             elif selected_tool == ToolSelect.Ellipse.value:
-                Ellipse(self.scene, self.parent().start_point_cords, self.parent().end_point_cords)
+                self.drawEllipseLogic()
             else:
                 pass
 
@@ -139,6 +139,32 @@ class GraphicsView(QGraphicsView):
         elif (x1 <= x2) & (y1 >= y2):
             self.scene.addItem(Rectangle(QRectF(x1, y1 - height, width, height), self.scene))
 
+    def drawEllipseLogic(self):
+        x1 = self.parent().start_point_cords.x()
+        y1 = self.parent().start_point_cords.y()
+        x2 = self.parent().end_point_cords.x()
+        y2 = self.parent().end_point_cords.y()
+        width = abs(x1 - x2)
+        height = abs(y1 - y2)
+
+        if (x1 <= x2) & (y1 <= y2):
+            self.scene.addItem(Ellipse(QRectF(x1, y1, width, height), self.scene))
+
+            #self.ellipse = QGraphicsEllipseItem(x1, y1, width, height)
+        elif (x1 >= x2) & (y1 <= y2):
+            self.scene.addItem(Ellipse(QRectF(x2, y2 - height, width, height), self.scene))
+
+            #self.ellipse = QGraphicsEllipseItem(x2, y2 - height, width, height)
+        elif (x1 >= x2) & (y1 >= y2):
+            self.scene.addItem(Ellipse(QRectF(x2, y2, width, height), self.scene))
+
+            #self.ellipse = QGraphicsEllipseItem(x2, y2, width, height)
+        elif (x1 <= x2) & (y1 >= y2):
+            self.scene.addItem(Ellipse(QRectF(x1, y1 - height, width, height), self.scene))
+
+            #self.ellipse = QGraphicsEllipseItem(x1, y1 - height, width, height)
+
+
 
 class Line(QGraphicsItem):
     def __init__(self, scene, start_cord, end_cord):
@@ -152,7 +178,7 @@ class Line(QGraphicsItem):
 
 
 class Rectangle(QGraphicsRectItem):
-    def __init__(self, rect=QRectF(0, 0, 100, 50), scene=None, parent=None):
+    def __init__(self, rect=QRectF(), scene=None, parent=None):
         super().__init__(rect, parent)
 
         self.setFlag(QGraphicsItem.ItemIsSelectable, True)
@@ -173,31 +199,27 @@ class Rectangle(QGraphicsRectItem):
         self.update()
 
 
-class Ellipse(QGraphicsItem):
-    def __init__(self, scene, start_cord, end_cord):
-        blackPen = QPen(Qt.black)
-        blackPen.setWidth(10)
-        x1 = start_cord.x()
-        y1 = start_cord.y()
-        x2 = end_cord.x()
-        y2 = end_cord.y()
-        width = abs(x1 - x2)
-        height = abs(y1 - y2)
+class Ellipse(QGraphicsEllipseItem):
+    def __init__(self, rect=QRectF(), scene=None, parent=None):
+        super().__init__(rect, parent)
 
-        if (x1 <= x2) & (y1 <= y2):
-            self.ellipse = QGraphicsEllipseItem(x1, y1, width, height)
-        elif (x1 >= x2) & (y1 <= y2):
-            self.ellipse = QGraphicsEllipseItem(x2, y2 - height, width, height)
-        elif (x1 >= x2) & (y1 >= y2):
-            self.ellipse = QGraphicsEllipseItem(x2, y2, width, height)
-        elif (x1 <= x2) & (y1 >= y2):
-            self.ellipse = QGraphicsEllipseItem(x1, y1 - height, width, height)
+        self.setFlag(QGraphicsItem.ItemIsSelectable, True)
+        self.setFlag(QGraphicsItem.ItemIsMovable, True)
+        self.setFlag(QGraphicsItem.ItemIsFocusable, True)
+        self.setFlag(QGraphicsItem.ItemSendsGeometryChanges, True)
 
-        if self.ellipse is not None:
-            self.ellipse.setPen(blackPen)
-            self.ellipse.setFlag(QGraphicsItem.ItemIsMovable)
-            self.ellipse.setFlag(QGraphicsItem.ItemIsSelectable)
-            scene.addItem(self.ellipse)
+        self.resizer = Resizer(parent=self)
+        resizerWidth = self.resizer.rect.width() / 2
+        resizerOffset = QPointF(resizerWidth, resizerWidth)
+        self.resizer.setPos(self.rect().bottomRight() - resizerOffset)
+        self.resizer.resizeSignal.connect(self.resizeRec)
+
+    @QtCore.Slot(QGraphicsObject)
+    def resizeRec(self, change):
+        self.setRect(self.rect().adjusted(0, 0, change.x(), change.y()))
+        self.prepareGeometryChange()
+        self.update()
+
 
 
 class Resizer(QGraphicsObject):
