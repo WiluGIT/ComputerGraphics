@@ -68,6 +68,10 @@ class Window(QMainWindow):
         self.resize_button.clicked.connect(self.resizeItem)
         self.buttonGroup.addButton(self.resize_button)
 
+        self.create_shape_button = QPushButton("Create", self)
+        self.create_shape_button.setGeometry(1120, 170, 50, 30)
+        self.create_shape_button.clicked.connect(self.textDraw)
+
         # labels
         self.mouse_cord_label = QLabel(self)
         self.mouse_cord_label.setGeometry(QRect(950, 440, 100, 50))
@@ -186,6 +190,8 @@ class Window(QMainWindow):
             else:
                 button.setStyleSheet("background-color: none")
 
+    def textDraw(self):
+        print("essa")
 
 class GraphicsView(QGraphicsView):
     selected_item = None
