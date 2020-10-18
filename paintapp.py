@@ -1,7 +1,8 @@
 from enum import Enum
 
 from PySide2.QtWidgets import QApplication, QMainWindow, QGraphicsScene, QPushButton, \
-    QGraphicsView, QGraphicsItem, QLabel, QGraphicsLineItem, QGraphicsRectItem, QGraphicsEllipseItem, QGraphicsObject
+    QGraphicsView, QGraphicsItem, QLabel, QGraphicsLineItem, QGraphicsRectItem, QGraphicsEllipseItem, QGraphicsObject, \
+    QButtonGroup
 from PySide2.QtGui import QBrush, QPen, QFont, QPainter, QColor
 from PySide2.QtCore import Qt, QRect, QPoint, Signal, QPointF, QRectF, Slot, QLineF
 from PySide2 import QtCore
@@ -40,25 +41,32 @@ class Window(QMainWindow):
         self.graphics_view.setGeometry(200, 10, self.graphic_view_width, self.graphic_view_height)
 
         # buttons
-        select_button = QPushButton("S", self)
-        select_button.setGeometry(20, 10, 30, 30)
-        select_button.clicked.connect(self.selectItem)
+        self.buttonGroup = QButtonGroup()
 
-        line_button = QPushButton("L", self)
-        line_button.setGeometry(60, 10, 30, 30)
-        line_button.clicked.connect(self.drawLine)
+        self.select_button = QPushButton("S", self)
+        self.select_button.setGeometry(20, 10, 30, 30)
+        self.select_button.clicked.connect(self.selectItem)
+        self.buttonGroup.addButton(self.select_button)
 
-        rect_button = QPushButton("R", self)
-        rect_button.setGeometry(100, 10, 30, 30)
-        rect_button.clicked.connect(self.drawRect)
+        self.line_button = QPushButton("L", self)
+        self.line_button.setGeometry(60, 10, 30, 30)
+        self.line_button.clicked.connect(self.drawLine)
+        self.buttonGroup.addButton(self.line_button)
 
-        ellipse_button = QPushButton("E", self)
-        ellipse_button.setGeometry(140, 10, 30, 30)
-        ellipse_button.clicked.connect(self.drawEllipse)
+        self.rect_button = QPushButton("R", self)
+        self.rect_button.setGeometry(100, 10, 30, 30)
+        self.rect_button.clicked.connect(self.drawRect)
+        self.buttonGroup.addButton(self.rect_button)
 
-        resize_button = QPushButton("Re", self)
-        resize_button.setGeometry(20, 60, 30, 30)
-        resize_button.clicked.connect(self.resizeItem)
+        self.ellipse_button = QPushButton("E", self)
+        self.ellipse_button.setGeometry(140, 10, 30, 30)
+        self.ellipse_button.clicked.connect(self.drawEllipse)
+        self.buttonGroup.addButton(self.ellipse_button)
+
+        self.resize_button = QPushButton("Re", self)
+        self.resize_button.setGeometry(20, 60, 30, 30)
+        self.resize_button.clicked.connect(self.resizeItem)
+        self.buttonGroup.addButton(self.resize_button)
 
         # labels
         self.mouse_cord_label = QLabel(self)
@@ -66,26 +74,31 @@ class Window(QMainWindow):
         self.mouse_cord_label.setText("(x: {}, y: {})".format(self.mouse_cords.x(), self.mouse_cords.y()))
 
     def drawLine(self):
+        self.clearButtonsBackground(self.line_button)
         self.selected_tool = ToolSelect.Line.value
         self.graphics_view.scene.clearSelection()
         self.clearResizer()
 
     def drawRect(self):
+        self.clearButtonsBackground(self.rect_button)
         self.selected_tool = ToolSelect.Rectangle.value
         self.graphics_view.scene.clearSelection()
         self.clearResizer()
 
     def drawEllipse(self):
+        self.clearButtonsBackground(self.ellipse_button)
         self.selected_tool = ToolSelect.Ellipse.value
         self.graphics_view.scene.clearSelection()
         self.clearResizer()
 
     def selectItem(self):
+        self.clearButtonsBackground(self.select_button)
         self.selected_tool = ToolSelect.Select.value
         self.graphics_view.scene.clearSelection()
         self.clearResizer()
 
     def resizeItem(self):
+        self.clearButtonsBackground(self.resize_button)
         self.selected_tool = ToolSelect.Resize.value
         self.graphics_view.scene.clearSelection()
         self.clearResizer()
@@ -96,6 +109,13 @@ class Window(QMainWindow):
             if obj_type == Resizer:
                 continue
             item.resizerVisibilityChange(False)
+
+    def clearButtonsBackground(self, buttonClicked):
+        for button in self.buttonGroup.buttons():
+            if button == buttonClicked:
+                button.setStyleSheet("background-color: red")
+            else:
+                button.setStyleSheet("background-color: none")
 
 
 class GraphicsView(QGraphicsView):
