@@ -67,18 +67,36 @@ class Window(QMainWindow):
 
     def drawLine(self):
         self.selected_tool = ToolSelect.Line.value
+        self.graphics_view.scene.clearSelection()
+        self.clearResizer()
 
     def drawRect(self):
         self.selected_tool = ToolSelect.Rectangle.value
+        self.graphics_view.scene.clearSelection()
+        self.clearResizer()
 
     def drawEllipse(self):
         self.selected_tool = ToolSelect.Ellipse.value
+        self.graphics_view.scene.clearSelection()
+        self.clearResizer()
 
     def selectItem(self):
         self.selected_tool = ToolSelect.Select.value
+        self.graphics_view.scene.clearSelection()
+        self.clearResizer()
 
     def resizeItem(self):
         self.selected_tool = ToolSelect.Resize.value
+        self.graphics_view.scene.clearSelection()
+        self.clearResizer()
+
+    def clearResizer(self):
+        for item in self.graphics_view.scene.items():
+            obj_type = type(item)
+            if obj_type == Resizer:
+                continue
+            item.resizerVisibilityChange(False)
+
 
 class GraphicsView(QGraphicsView):
     selected_item = None
@@ -142,12 +160,12 @@ class GraphicsView(QGraphicsView):
 
             if (obj_type == Rectangle) | (obj_type == Line) | (obj_type == Ellipse):
                 self.selected_item.resizerVisibilityChange(True)
-        elif len(selectedItems) == 0:
-            obj_type = type(self.selected_item)
-
-            if (obj_type == Rectangle) | (obj_type == Line) | (obj_type == Ellipse):
-                self.selected_item.resizerVisibilityChange(False)
-                self.selected_item = None
+        # elif len(selectedItems) == 0:
+        #     obj_type = type(self.selected_item)
+        #
+        #     if (obj_type == Rectangle) | (obj_type == Line) | (obj_type == Ellipse):
+        #         self.selected_item.resizerVisibilityChange(False)
+        #         self.selected_item = None
 
     def drawRectangleLogic(self):
         x1 = self.parent().start_point_cords.x()
@@ -243,7 +261,6 @@ class Rectangle(QGraphicsRectItem):
 
     def resizerVisibilityChange(self, visibleFlag):
         self.resizer.setVisible(visibleFlag)
-
 
 
 class Ellipse(QGraphicsEllipseItem):
