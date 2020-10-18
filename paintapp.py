@@ -133,10 +133,10 @@ class GraphicsView(QGraphicsView):
     def selectionChanged(self):
         selectedItems = self.scene.selectedItems()
         selected_tool = self.parent().selected_tool
-        print(selectedItems)
-        if (len(selectedItems) == 1) & (selected_tool == ToolSelect.Select.value):
+
+        if (len(selectedItems) == 1) & (selected_tool == ToolSelect.Resize.value):
             obj_type = type(selectedItems[0])
-            print(obj_type)
+
             if (obj_type == Rectangle) | (obj_type == Line) | (obj_type == Ellipse):
                 self.selected_item = selectedItems[0]
 
@@ -144,6 +144,7 @@ class GraphicsView(QGraphicsView):
                 self.selected_item.resizerVisibilityChange(True)
         elif len(selectedItems) == 0:
             obj_type = type(self.selected_item)
+
             if (obj_type == Rectangle) | (obj_type == Line) | (obj_type == Ellipse):
                 self.selected_item.resizerVisibilityChange(False)
                 self.selected_item = None
@@ -193,7 +194,6 @@ class GraphicsView(QGraphicsView):
 
 
 class Line(QGraphicsLineItem):
-    resizerVisibility = False
     def __init__(self, line=QLineF(0, 0, 100, 100), scene=None, parent=None):
         super().__init__(line, parent)
         self.setFlag(QGraphicsItem.ItemIsSelectable, True)
@@ -205,6 +205,7 @@ class Line(QGraphicsLineItem):
         resizerWidth = self.resizer.rect.width() / 2
         resizerOffset = QPointF(resizerWidth, resizerWidth)
         self.resizer.setPos(self.line().p2() - resizerOffset)
+        self.resizer.setVisible(False)
         self.resizer.resizeSignal.connect(self.resizeLine)
 
 
@@ -213,6 +214,9 @@ class Line(QGraphicsLineItem):
         self.setLine(self.line().x1(), self.line().y1(), self.line().x2() + change.x(), self.line().y2() + change.y())
         self.prepareGeometryChange()
         self.update()
+
+    def resizerVisibilityChange(self, visibleFlag):
+        self.resizer.setVisible(visibleFlag)
 
 
 class Rectangle(QGraphicsRectItem):
@@ -255,6 +259,7 @@ class Ellipse(QGraphicsEllipseItem):
         resizerWidth = self.resizer.rect.width() / 2
         resizerOffset = QPointF(resizerWidth, resizerWidth)
         self.resizer.setPos(self.rect().bottomRight() - resizerOffset)
+        self.resizer.setVisible(False)
         self.resizer.resizeSignal.connect(self.resizeRec)
 
     @QtCore.Slot(QGraphicsObject)
@@ -262,6 +267,9 @@ class Ellipse(QGraphicsEllipseItem):
         self.setRect(self.rect().adjusted(0, 0, change.x(), change.y()))
         self.prepareGeometryChange()
         self.update()
+
+    def resizerVisibilityChange(self, visibleFlag):
+        self.resizer.setVisible(visibleFlag)
 
 
 class Resizer(QGraphicsObject):
