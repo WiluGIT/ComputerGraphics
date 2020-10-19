@@ -43,6 +43,7 @@ class Window(QMainWindow):
         # groups and sections
         self.buttonGroup = QButtonGroup()
         self.text_creator_section = []
+        self.resizer_text_section = []
         # buttons
         self.select_button = QPushButton("S", self)
         self.select_button.setGeometry(20, 10, 30, 30)
@@ -74,6 +75,11 @@ class Window(QMainWindow):
         self.create_shape_button.clicked.connect(self.textDraw)
         self.text_creator_section.append(self.create_shape_button)
 
+        self.update_shape_button = QPushButton("Update", self)
+        self.update_shape_button.setGeometry(1120, 100, 50, 30)
+        self.update_shape_button.clicked.connect(self.updateShape)
+        self.resizer_text_section.append(self.update_shape_button)
+
         # labels
         self.mouse_cord_label = QLabel(self)
         self.mouse_cord_label.setGeometry(QRect(950, 440, 100, 50))
@@ -97,6 +103,16 @@ class Window(QMainWindow):
         self.point_end_label.setGeometry(QRect(1150, 70, 200, 30))
         self.point_end_label.setText("Punkt końcowy:")
         self.text_creator_section.append(self.point_end_label)
+
+        self.width_label = QLabel(self)
+        self.width_label.setGeometry(QRect(1050, 40, 200, 30))
+        self.width_label.setText("Szerokość:")
+        self.resizer_text_section.append(self.width_label)
+
+        self.height_label = QLabel(self)
+        self.height_label.setGeometry(QRect(1150, 40, 200, 30))
+        self.height_label.setText("Wysokość:")
+        self.resizer_text_section.append(self.height_label)
 
         self.point_start_x1_label = QLabel(self)
         self.point_start_x1_label.setGeometry(QRect(1050, 100, 200, 30))
@@ -135,6 +151,14 @@ class Window(QMainWindow):
         self.point_end_y2_edit.setGeometry(QRect(1180, 130, 30, 30))
         self.text_creator_section.append(self.point_end_y2_edit)
 
+        self.width_edit = QLineEdit(self)
+        self.width_edit.setGeometry(QRect(1080, 70, 30, 30))
+        self.resizer_text_section.append(self.width_edit)
+
+        self.height_edit = QLineEdit(self)
+        self.height_edit.setGeometry(QRect(1180, 70, 30, 30))
+        self.resizer_text_section.append(self.height_edit)
+
         # regex
         y_regex = QtCore.QRegExp("([0-9]|[1-8][0-9]|9[0-9]|[1-3][0-9]{2}|4[0-3][0-9]|440)")  # value between 0 and 440
         y_validator = QRegExpValidator(y_regex)
@@ -148,8 +172,12 @@ class Window(QMainWindow):
         self.point_start_y1_edit.setValidator(y_validator)
         self.point_end_y2_edit.setValidator(y_validator)
 
+        self.height_edit.setValidator(y_validator)
+        self.width_edit.setValidator(x_validator)
+
         # sections visibility
         self.setTextCreatorSectionVisibility(False)
+        self.setResizerVisabilitySection(False)
 
     def drawLine(self):
         self.shape_label.setText("Narzędzie: Linia")
@@ -158,6 +186,7 @@ class Window(QMainWindow):
         self.graphics_view.scene.clearSelection()
         self.clearResizer()
         self.setTextCreatorSectionVisibility(True)
+        self.setResizerVisabilitySection(False)
 
     def drawRect(self):
         self.shape_label.setText("Narzędzie: Prostokąt")
@@ -166,6 +195,7 @@ class Window(QMainWindow):
         self.graphics_view.scene.clearSelection()
         self.clearResizer()
         self.setTextCreatorSectionVisibility(True)
+        self.setResizerVisabilitySection(False)
 
     def drawEllipse(self):
         self.shape_label.setText("Narzędzie: Elipsa")
@@ -174,6 +204,7 @@ class Window(QMainWindow):
         self.graphics_view.scene.clearSelection()
         self.clearResizer()
         self.setTextCreatorSectionVisibility(True)
+        self.setResizerVisabilitySection(False)
 
     def selectItem(self):
         self.shape_label.setText("Narzędzie: Zaznacz")
@@ -182,6 +213,7 @@ class Window(QMainWindow):
         self.graphics_view.scene.clearSelection()
         self.clearResizer()
         self.setTextCreatorSectionVisibility(False)
+        self.setResizerVisabilitySection(False)
 
     def resizeItem(self):
         self.shape_label.setText("Narzędzie: Zmiana Rozmiaru")
@@ -189,7 +221,8 @@ class Window(QMainWindow):
         self.selected_tool = ToolSelect.Resize.value
         self.graphics_view.scene.clearSelection()
         self.clearResizer()
-        self.setTextCreatorSectionVisibility(True)
+        self.setTextCreatorSectionVisibility(False)
+        self.setResizerVisabilitySection(True)
 
     def clearResizer(self):
         for item in self.graphics_view.scene.items():
@@ -228,12 +261,34 @@ class Window(QMainWindow):
             msg.setStandardButtons(QMessageBox.Ok)
             msg.exec_()
 
+    def updateShape(self):
+        try:
+            if type(self.graphics_view.selected_item) == Line:
+                self.graphics_view.selected_item.resizeLineText(int(self.width_edit.text()))
+            else:
+                self.graphics_view.selected_item.resizeRectText(int(self.width_edit.text()), int(self.height_edit.text()))
+        except ValueError:
+            msg = QMessageBox()
+            msg.setIcon(QMessageBox.Information)
+            msg.setText("Width/Height can't be empty")
+            msg.setWindowTitle("Warning!")
+            msg.setStandardButtons(QMessageBox.Ok)
+            msg.exec_()
+
     def setTextCreatorSectionVisibility(self, visible_flag):
         if visible_flag:
             for item in self.text_creator_section:
                 item.setVisible(True)
         elif not visible_flag:
             for item in self.text_creator_section:
+                item.setVisible(False)
+
+    def setResizerVisabilitySection(self, visible_flag):
+        if visible_flag:
+            for item in self.resizer_text_section:
+                item.setVisible(True)
+        elif not visible_flag:
+            for item in self.resizer_text_section:
                 item.setVisible(False)
 
 
@@ -293,11 +348,24 @@ class GraphicsView(QGraphicsView):
 
         if (len(selectedItems) == 1) & (selected_tool == ToolSelect.Resize.value):
             obj_type = type(selectedItems[0])
+            if obj_type is not Resizer:
+                self.setLineLengthControl(False)
 
             if (obj_type == Rectangle) | (obj_type == Line) | (obj_type == Ellipse):
                 self.selected_item = selectedItems[0]
                 self.selected_item.resizerVisibilityChange(True)
                 self.selected_item.populateTextCreator(self)
+
+                if obj_type == Line:
+                    self.setLineLengthControl(True)
+
+    def setLineLengthControl(self, setFlag):
+        if setFlag:
+            self.parent().height_edit.setDisabled(True)
+            self.parent().width_label.setText("Długość:")
+        else:
+            self.parent().height_edit.setDisabled(False)
+            self.parent().width_label.setText("Szerokość:")
 
     def drawRectangleLogic(self, x1=None, y1=None, x2=None, y2=None):
         if (x1 is None) | (y1 is None) | (x2 is None) | (y2 is None):
@@ -370,11 +438,8 @@ class Line(QGraphicsLineItem):
         self.resizer.setVisible(visibleFlag)
 
     def populateTextCreator(self, graphicView):
-        graphicView.parent().point_start_x1_edit.setText(str(int(self.line().x1())))
-        graphicView.parent().point_start_y1_edit.setText(str(int(self.line().y1())))
-        graphicView.parent().point_end_x2_edit.setText(str(int(self.line().x2())))
-        graphicView.parent().point_end_y2_edit.setText(str(int(self.line().y2())))
-        
+        graphicView.parent().width_edit.setText(str(int(self.line().length())))
+
     def resizeLineText(self, length):
         line = self.line()
         line.setLength(length)
@@ -382,6 +447,7 @@ class Line(QGraphicsLineItem):
         resizerWidth = self.resizer.rect.width() / 2
         resizerOffset = QPointF(resizerWidth, resizerWidth)
         self.resizer.setPos(self.line().p2() - resizerOffset)
+
 
 class Rectangle(QGraphicsRectItem):
     def __init__(self, rect=QRectF(), scene=None, parent=None):
@@ -408,7 +474,18 @@ class Rectangle(QGraphicsRectItem):
     def resizerVisibilityChange(self, visibleFlag):
         self.resizer.setVisible(visibleFlag)
 
-    #def populateTextCreator(self):
+    def populateTextCreator(self, graphicView):
+        graphicView.parent().width_edit.setText(str(int(self.rect().width())))
+        graphicView.parent().height_edit.setText(str(int(self.rect().height())))
+
+    def resizeRectText(self, width, height):
+        rect = self.rect()
+        rect.setWidth(width)
+        rect.setHeight(height)
+        self.setRect(rect)
+        resizerWidth = self.resizer.rect.width() / 2
+        resizerOffset = QPointF(resizerWidth, resizerWidth)
+        self.resizer.setPos(self.rect().bottomRight() - resizerOffset)
 
 
 class Ellipse(QGraphicsEllipseItem):
@@ -436,7 +513,18 @@ class Ellipse(QGraphicsEllipseItem):
     def resizerVisibilityChange(self, visibleFlag):
         self.resizer.setVisible(visibleFlag)
 
-    #def populateTextCreator(self):
+    def populateTextCreator(self, graphicView):
+        graphicView.parent().width_edit.setText(str(int(self.rect().width())))
+        graphicView.parent().height_edit.setText(str(int(self.rect().height())))
+
+    def resizeRectText(self, width, height):
+        rect = self.rect()
+        rect.setWidth(width)
+        rect.setHeight(height)
+        self.setRect(rect)
+        resizerWidth = self.resizer.rect.width() / 2
+        resizerOffset = QPointF(resizerWidth, resizerWidth)
+        self.resizer.setPos(self.rect().bottomRight() - resizerOffset)
 
 
 class Resizer(QGraphicsObject):
