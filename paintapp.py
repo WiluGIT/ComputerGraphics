@@ -2,7 +2,7 @@ from enum import Enum
 
 from PySide2.QtWidgets import QApplication, QMainWindow, QGraphicsScene, QPushButton, \
     QGraphicsView, QGraphicsItem, QLabel, QGraphicsLineItem, QGraphicsRectItem, QGraphicsEllipseItem, QGraphicsObject, \
-    QButtonGroup, QLineEdit, QLayout
+    QButtonGroup, QLineEdit, QLayout, QMessageBox
 from PySide2.QtGui import QBrush, QPen, QFont, QPainter, QColor, QRegExpValidator
 from PySide2.QtCore import Qt, QRect, QPoint, Signal, QPointF, QRectF, Slot, QLineF
 from PySide2 import QtCore
@@ -15,7 +15,6 @@ class ToolSelect(Enum):
     Rectangle = 2
     Ellipse = 3
     Resize = 4
-
 
 class Window(QMainWindow):
     # consts
@@ -136,11 +135,11 @@ class Window(QMainWindow):
         self.text_creator_section.append(self.point_end_y2_edit)
 
         # regex
-        x_regex = QtCore.QRegExp("([0-9]|[1-8][0-9]|9[0-9]|[1-3][0-9]{2}|4[0-3][0-9]|440)") # value between 0 and 440
-        x_validator = QRegExpValidator(x_regex)
-
-        y_regex = QtCore.QRegExp("([0-9]|[1-8][0-9]|9[0-9]|[1-7][0-9]{2}|8[0-3][0-9]|840)")  # value between 0 and 840
+        y_regex = QtCore.QRegExp("([0-9]|[1-8][0-9]|9[0-9]|[1-3][0-9]{2}|4[0-3][0-9]|440)") # value between 0 and 440
         y_validator = QRegExpValidator(y_regex)
+
+        x_regex = QtCore.QRegExp("([0-9]|[1-8][0-9]|9[0-9]|[1-7][0-9]{2}|8[0-3][0-9]|840)")  # value between 0 and 840
+        x_validator = QRegExpValidator(x_regex)
 
         self.point_start_x1_edit.setValidator(x_validator)
         self.point_end_x2_edit.setValidator(x_validator)
@@ -205,9 +204,26 @@ class Window(QMainWindow):
             else:
                 button.setStyleSheet("background-color: none")
 
-    def textDraw(self):
-        for item in self.text_creator_section:
-            item.setVisible(False)
+    def textDraw(self, shape):
+        try:
+            x1 = int(self.point_start_x1_edit.text())
+            y1 = int(self.point_start_y1_edit.text())
+            x2 = int(self.point_end_x2_edit.text())
+            y2 = int(self.point_end_y2_edit.text())
+
+            if self.selected_tool == ToolSelect.Line.value:
+                self.graphics_view.scene.addItem(Line(QLineF(x1, y1, x2, y2), self.graphics_view.scene))
+            elif self.selected_tool == ToolSelect.Rectangle.value:
+                self.graphics_view.drawRectangleLogic(x1, y1, x2, y2)
+            elif self.selected_tool == ToolSelect.Ellipse.value:
+                self.graphics_view.drawEllipseLogic(x1, y1, x2, y2)
+        except ValueError:
+            msg = QMessageBox()
+            msg.setIcon(QMessageBox.Information)
+            msg.setText("Not all points have value")
+            msg.setWindowTitle("Warning!")
+            msg.setStandardButtons(QMessageBox.Ok)
+            msg.exec_()
 
     def setTextCreatorSectionVisibility(self, visible_flag):
         if visible_flag:
@@ -216,6 +232,7 @@ class Window(QMainWindow):
         elif not visible_flag:
             for item in self.text_creator_section:
                 item.setVisible(False)
+
 
 class GraphicsView(QGraphicsView):
     selected_item = None
@@ -280,11 +297,12 @@ class GraphicsView(QGraphicsView):
             if (obj_type == Rectangle) | (obj_type == Line) | (obj_type == Ellipse):
                 self.selected_item.resizerVisibilityChange(True)
 
-    def drawRectangleLogic(self):
-        x1 = self.parent().start_point_cords.x()
-        y1 = self.parent().start_point_cords.y()
-        x2 = self.parent().end_point_cords.x()
-        y2 = self.parent().end_point_cords.y()
+    def drawRectangleLogic(self, x1=None, y1=None, x2=None, y2=None):
+        if (x1 is None) | (y1 is None) | (x2 is None) | (y2 is None):
+            x1 = self.parent().start_point_cords.x()
+            y1 = self.parent().start_point_cords.y()
+            x2 = self.parent().end_point_cords.x()
+            y2 = self.parent().end_point_cords.y()
         width = abs(x1 - x2)
         height = abs(y1 - y2)
 
@@ -297,11 +315,12 @@ class GraphicsView(QGraphicsView):
         elif (x1 <= x2) & (y1 >= y2):
             self.scene.addItem(Rectangle(QRectF(x1, y1 - height, width, height), self.scene))
 
-    def drawEllipseLogic(self):
-        x1 = self.parent().start_point_cords.x()
-        y1 = self.parent().start_point_cords.y()
-        x2 = self.parent().end_point_cords.x()
-        y2 = self.parent().end_point_cords.y()
+    def drawEllipseLogic(self, x1=None, y1=None, x2=None, y2=None):
+        if (x1 is None) | (y1 is None) | (x2 is None) | (y2 is None):
+            x1 = self.parent().start_point_cords.x()
+            y1 = self.parent().start_point_cords.y()
+            x2 = self.parent().end_point_cords.x()
+            y2 = self.parent().end_point_cords.y()
         width = abs(x1 - x2)
         height = abs(y1 - y2)
 
