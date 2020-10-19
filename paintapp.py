@@ -2,7 +2,7 @@ from enum import Enum
 
 from PySide2.QtWidgets import QApplication, QMainWindow, QGraphicsScene, QPushButton, \
     QGraphicsView, QGraphicsItem, QLabel, QGraphicsLineItem, QGraphicsRectItem, QGraphicsEllipseItem, QGraphicsObject, \
-    QButtonGroup, QLineEdit
+    QButtonGroup, QLineEdit, QLayout
 from PySide2.QtGui import QBrush, QPen, QFont, QPainter, QColor, QRegExpValidator
 from PySide2.QtCore import Qt, QRect, QPoint, Signal, QPointF, QRectF, Slot, QLineF
 from PySide2 import QtCore
@@ -40,9 +40,10 @@ class Window(QMainWindow):
         self.graphics_view = GraphicsView(self)
         self.graphics_view.setGeometry(200, 10, self.graphic_view_width, self.graphic_view_height)
 
-        # buttons
+        # groups and sections
         self.buttonGroup = QButtonGroup()
-
+        self.text_creator_section = []
+        # buttons
         self.select_button = QPushButton("S", self)
         self.select_button.setGeometry(20, 10, 30, 30)
         self.select_button.clicked.connect(self.selectItem)
@@ -71,6 +72,7 @@ class Window(QMainWindow):
         self.create_shape_button = QPushButton("Create", self)
         self.create_shape_button.setGeometry(1120, 170, 50, 30)
         self.create_shape_button.clicked.connect(self.textDraw)
+        self.text_creator_section.append(self.create_shape_button)
 
         # labels
         self.mouse_cord_label = QLabel(self)
@@ -84,44 +86,54 @@ class Window(QMainWindow):
         self.creator_label = QLabel(self)
         self.creator_label.setGeometry(QRect(1050, 40, 200, 30))
         self.creator_label.setText("Kreator tekstowy")
-        self.creator_label.setVisible(False)
+        self.text_creator_section.append(self.creator_label)
 
         self.point_start_label = QLabel(self)
         self.point_start_label.setGeometry(QRect(1050, 70, 200, 30))
         self.point_start_label.setText("Punkt startowy:")
+        self.text_creator_section.append(self.point_start_label)
 
         self.point_end_label = QLabel(self)
         self.point_end_label.setGeometry(QRect(1150, 70, 200, 30))
         self.point_end_label.setText("Punkt końcowy:")
+        self.text_creator_section.append(self.point_end_label)
 
         self.point_start_x1_label = QLabel(self)
         self.point_start_x1_label.setGeometry(QRect(1050, 100, 200, 30))
         self.point_start_x1_label.setText("X1:")
+        self.text_creator_section.append(self.point_start_x1_label)
 
         self.point_start_y1_label = QLabel(self)
         self.point_start_y1_label.setGeometry(QRect(1050, 130, 200, 30))
         self.point_start_y1_label.setText("Y1:")
+        self.text_creator_section.append(self.point_start_y1_label)
 
         self.point_end_x2_label = QLabel(self)
         self.point_end_x2_label.setGeometry(QRect(1150, 100, 200, 30))
         self.point_end_x2_label.setText("X2:")
+        self.text_creator_section.append(self.point_end_x2_label)
 
         self.point_end_y2_label = QLabel(self)
         self.point_end_y2_label.setGeometry(QRect(1150, 130, 200, 30))
         self.point_end_y2_label.setText("Y2:")
+        self.text_creator_section.append(self.point_end_y2_label)
 
         #line edit
         self.point_start_x1_edit = QLineEdit(self)
         self.point_start_x1_edit.setGeometry(QRect(1080, 100, 30, 30))
+        self.text_creator_section.append(self.point_start_x1_edit)
 
         self.point_start_y1_edit = QLineEdit(self)
         self.point_start_y1_edit.setGeometry(QRect(1080, 130, 30, 30))
+        self.text_creator_section.append(self.point_start_y1_edit)
 
         self.point_end_x2_edit = QLineEdit(self)
         self.point_end_x2_edit.setGeometry(QRect(1180, 100, 30, 30))
+        self.text_creator_section.append(self.point_end_x2_edit)
 
         self.point_end_y2_edit = QLineEdit(self)
         self.point_end_y2_edit.setGeometry(QRect(1180, 130, 30, 30))
+        self.text_creator_section.append(self.point_end_y2_edit)
 
         # regex
         x_regex = QtCore.QRegExp("([0-9]|[1-8][0-9]|9[0-9]|[1-3][0-9]{2}|4[0-3][0-9]|440)") # value between 0 and 440
@@ -136,45 +148,48 @@ class Window(QMainWindow):
         self.point_start_y1_edit.setValidator(y_validator)
         self.point_end_y2_edit.setValidator(y_validator)
 
+        # sections visibility
+        self.setTextCreatorSectionVisibility(False)
+
     def drawLine(self):
         self.shape_label.setText("Narzędzie: Linia")
-        self.creator_label.setVisible(True)
         self.clearButtonsBackground(self.line_button)
         self.selected_tool = ToolSelect.Line.value
         self.graphics_view.scene.clearSelection()
         self.clearResizer()
+        self.setTextCreatorSectionVisibility(True)
 
     def drawRect(self):
         self.shape_label.setText("Narzędzie: Prostokąt")
-        self.creator_label.setVisible(True)
         self.clearButtonsBackground(self.rect_button)
         self.selected_tool = ToolSelect.Rectangle.value
         self.graphics_view.scene.clearSelection()
         self.clearResizer()
+        self.setTextCreatorSectionVisibility(True)
 
     def drawEllipse(self):
         self.shape_label.setText("Narzędzie: Elipsa")
-        self.creator_label.setVisible(True)
         self.clearButtonsBackground(self.ellipse_button)
         self.selected_tool = ToolSelect.Ellipse.value
         self.graphics_view.scene.clearSelection()
         self.clearResizer()
+        self.setTextCreatorSectionVisibility(True)
 
     def selectItem(self):
         self.shape_label.setText("Narzędzie: Zaznacz")
-        self.creator_label.setVisible(False)
         self.clearButtonsBackground(self.select_button)
         self.selected_tool = ToolSelect.Select.value
         self.graphics_view.scene.clearSelection()
         self.clearResizer()
+        self.setTextCreatorSectionVisibility(False)
 
     def resizeItem(self):
         self.shape_label.setText("Narzędzie: Zmiana Rozmiaru")
-        self.creator_label.setVisible(False)
         self.clearButtonsBackground(self.resize_button)
         self.selected_tool = ToolSelect.Resize.value
         self.graphics_view.scene.clearSelection()
         self.clearResizer()
+        self.setTextCreatorSectionVisibility(False)
 
     def clearResizer(self):
         for item in self.graphics_view.scene.items():
@@ -191,7 +206,16 @@ class Window(QMainWindow):
                 button.setStyleSheet("background-color: none")
 
     def textDraw(self):
-        print("essa")
+        for item in self.text_creator_section:
+            item.setVisible(False)
+
+    def setTextCreatorSectionVisibility(self, visible_flag):
+        if visible_flag:
+            for item in self.text_creator_section:
+                item.setVisible(True)
+        elif not visible_flag:
+            for item in self.text_creator_section:
+                item.setVisible(False)
 
 class GraphicsView(QGraphicsView):
     selected_item = None
