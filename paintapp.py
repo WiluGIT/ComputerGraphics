@@ -16,6 +16,7 @@ class ToolSelect(Enum):
     Ellipse = 3
     Resize = 4
 
+
 class Window(QMainWindow):
     # consts
     graphic_view_width = 840
@@ -135,7 +136,7 @@ class Window(QMainWindow):
         self.text_creator_section.append(self.point_end_y2_edit)
 
         # regex
-        y_regex = QtCore.QRegExp("([0-9]|[1-8][0-9]|9[0-9]|[1-3][0-9]{2}|4[0-3][0-9]|440)") # value between 0 and 440
+        y_regex = QtCore.QRegExp("([0-9]|[1-8][0-9]|9[0-9]|[1-3][0-9]{2}|4[0-3][0-9]|440)")  # value between 0 and 440
         y_validator = QRegExpValidator(y_regex)
 
         x_regex = QtCore.QRegExp("([0-9]|[1-8][0-9]|9[0-9]|[1-7][0-9]{2}|8[0-3][0-9]|840)")  # value between 0 and 840
@@ -188,7 +189,7 @@ class Window(QMainWindow):
         self.selected_tool = ToolSelect.Resize.value
         self.graphics_view.scene.clearSelection()
         self.clearResizer()
-        self.setTextCreatorSectionVisibility(False)
+        self.setTextCreatorSectionVisibility(True)
 
     def clearResizer(self):
         for item in self.graphics_view.scene.items():
@@ -204,7 +205,7 @@ class Window(QMainWindow):
             else:
                 button.setStyleSheet("background-color: none")
 
-    def textDraw(self, shape):
+    def textDraw(self):
         try:
             x1 = int(self.point_start_x1_edit.text())
             y1 = int(self.point_start_y1_edit.text())
@@ -217,6 +218,8 @@ class Window(QMainWindow):
                 self.graphics_view.drawRectangleLogic(x1, y1, x2, y2)
             elif self.selected_tool == ToolSelect.Ellipse.value:
                 self.graphics_view.drawEllipseLogic(x1, y1, x2, y2)
+            elif self.selected_tool == ToolSelect.Resize.value:
+                self.updateShape(x1, y1, x2, y2, self.graphics_view.selected_item)
         except ValueError:
             msg = QMessageBox()
             msg.setIcon(QMessageBox.Information)
@@ -293,9 +296,8 @@ class GraphicsView(QGraphicsView):
 
             if (obj_type == Rectangle) | (obj_type == Line) | (obj_type == Ellipse):
                 self.selected_item = selectedItems[0]
-
-            if (obj_type == Rectangle) | (obj_type == Line) | (obj_type == Ellipse):
                 self.selected_item.resizerVisibilityChange(True)
+                self.selected_item.populateTextCreator(self)
 
     def drawRectangleLogic(self, x1=None, y1=None, x2=None, y2=None):
         if (x1 is None) | (y1 is None) | (x2 is None) | (y2 is None):
@@ -358,7 +360,6 @@ class Line(QGraphicsLineItem):
         self.resizer.setVisible(False)
         self.resizer.resizeSignal.connect(self.resizeLine)
 
-
     @QtCore.Slot(QGraphicsObject)
     def resizeLine(self, change):
         self.setLine(self.line().x1(), self.line().y1(), self.line().x2() + change.x(), self.line().y2() + change.y())
@@ -368,6 +369,19 @@ class Line(QGraphicsLineItem):
     def resizerVisibilityChange(self, visibleFlag):
         self.resizer.setVisible(visibleFlag)
 
+    def populateTextCreator(self, graphicView):
+        graphicView.parent().point_start_x1_edit.setText(str(int(self.line().x1())))
+        graphicView.parent().point_start_y1_edit.setText(str(int(self.line().y1())))
+        graphicView.parent().point_end_x2_edit.setText(str(int(self.line().x2())))
+        graphicView.parent().point_end_y2_edit.setText(str(int(self.line().y2())))
+        
+    def resizeLineText(self, length):
+        line = self.line()
+        line.setLength(length)
+        self.setLine(line)
+        resizerWidth = self.resizer.rect.width() / 2
+        resizerOffset = QPointF(resizerWidth, resizerWidth)
+        self.resizer.setPos(self.line().p2() - resizerOffset)
 
 class Rectangle(QGraphicsRectItem):
     def __init__(self, rect=QRectF(), scene=None, parent=None):
@@ -394,6 +408,8 @@ class Rectangle(QGraphicsRectItem):
     def resizerVisibilityChange(self, visibleFlag):
         self.resizer.setVisible(visibleFlag)
 
+    #def populateTextCreator(self):
+
 
 class Ellipse(QGraphicsEllipseItem):
     def __init__(self, rect=QRectF(), scene=None, parent=None):
@@ -419,6 +435,8 @@ class Ellipse(QGraphicsEllipseItem):
 
     def resizerVisibilityChange(self, visibleFlag):
         self.resizer.setVisible(visibleFlag)
+
+    #def populateTextCreator(self):
 
 
 class Resizer(QGraphicsObject):
