@@ -2,7 +2,7 @@ from enum import Enum
 
 from PySide2.QtWidgets import QApplication, QMainWindow, QGraphicsScene, QPushButton, \
     QGraphicsView, QGraphicsItem, QLabel, QGraphicsLineItem, QGraphicsRectItem, QGraphicsEllipseItem, QGraphicsObject, \
-    QButtonGroup, QLineEdit, QLayout, QMessageBox
+    QButtonGroup, QLineEdit, QLayout, QMessageBox, QComboBox
 from PySide2.QtGui import QBrush, QPen, QFont, QPainter, QColor, QRegExpValidator
 from PySide2.QtCore import Qt, QRect, QPoint, Signal, QPointF, QRectF, Slot, QLineF
 from PySide2 import QtCore
@@ -71,7 +71,7 @@ class Window(QMainWindow):
         self.buttonGroup.addButton(self.resize_button)
 
         self.create_shape_button = QPushButton("Create", self)
-        self.create_shape_button.setGeometry(1120, 170, 50, 30)
+        self.create_shape_button.setGeometry(1120, 250, 50, 30)
         self.create_shape_button.clicked.connect(self.textDraw)
         self.text_creator_section.append(self.create_shape_button)
 
@@ -134,6 +134,10 @@ class Window(QMainWindow):
         self.point_end_y2_label.setText("Y2:")
         self.text_creator_section.append(self.point_end_y2_label)
 
+        self.size_select_box_label = QLabel("Rozmiar:", self)
+        self.size_select_box_label.setGeometry(1050, 170, 50, 30)
+        self.text_creator_section.append(self.size_select_box_label)
+
         #line edit
         self.point_start_x1_edit = QLineEdit(self)
         self.point_start_x1_edit.setGeometry(QRect(1080, 100, 30, 30))
@@ -158,6 +162,17 @@ class Window(QMainWindow):
         self.height_edit = QLineEdit(self)
         self.height_edit.setGeometry(QRect(1180, 70, 30, 30))
         self.resizer_text_section.append(self.height_edit)
+
+        # select box
+        self.size_select_box = QComboBox(self)
+        self.size_select_box.setGeometry(1050, 200, 50, 30)
+        self.size_select_box.addItem("1x")
+        self.size_select_box.addItem("2x")
+        self.size_select_box.addItem("4x")
+        self.size_select_box.addItem("6x")
+        self.size_select_box.addItem("8x")
+        self.size_select_box.currentIndexChanged.connect(self.size_combo_box)
+        self.text_creator_section.append(self.size_select_box)
 
         # regex
         y_regex = QtCore.QRegExp("([0-9]|[1-8][0-9]|9[0-9]|[1-3][0-9]{2}|4[0-3][0-9]|440)")  # value between 0 and 440
@@ -304,11 +319,25 @@ class Window(QMainWindow):
                         item.setFlag(QGraphicsItem.ItemIsFocusable, moveFlag)
                         item.setFlag(QGraphicsItem.ItemSendsGeometryChanges, moveFlag)
 
+    def size_combo_box(self):
+        size = self.size_select_box.currentIndex()
+
+        if size == 0:
+            self.graphics_view.graphic_Pen.setWidth(1)
+        elif size == 1:
+            self.graphics_view.graphic_Pen.setWidth(2)
+        elif size == 2:
+            self.graphics_view.graphic_Pen.setWidth(4)
+        elif size == 3:
+            self.graphics_view.graphic_Pen.setWidth(6)
+        elif size == 4:
+            self.graphics_view.graphic_Pen.setWidth(8)
+
 
 class GraphicsView(QGraphicsView):
     selected_item = None
     graphic_Pen = QPen(Qt.black)
-    graphic_Pen.setWidth(8)
+    graphic_Pen.setWidth(1)
     def __init__(self, parent=None):
         super(GraphicsView, self).__init__(parent)
         self.setup_ui()
