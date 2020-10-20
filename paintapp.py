@@ -187,6 +187,7 @@ class Window(QMainWindow):
         self.clearResizer()
         self.setTextCreatorSectionVisibility(True)
         self.setResizerVisabilitySection(False)
+        self.setMovable(False)
 
     def drawRect(self):
         self.shape_label.setText("Narzędzie: Prostokąt")
@@ -196,6 +197,7 @@ class Window(QMainWindow):
         self.clearResizer()
         self.setTextCreatorSectionVisibility(True)
         self.setResizerVisabilitySection(False)
+        self.setMovable(False)
 
     def drawEllipse(self):
         self.shape_label.setText("Narzędzie: Elipsa")
@@ -205,6 +207,7 @@ class Window(QMainWindow):
         self.clearResizer()
         self.setTextCreatorSectionVisibility(True)
         self.setResizerVisabilitySection(False)
+        self.setMovable(False)
 
     def selectItem(self):
         self.shape_label.setText("Narzędzie: Zaznacz")
@@ -214,6 +217,7 @@ class Window(QMainWindow):
         self.clearResizer()
         self.setTextCreatorSectionVisibility(False)
         self.setResizerVisabilitySection(False)
+        self.setMovable(True)
 
     def resizeItem(self):
         self.shape_label.setText("Narzędzie: Zmiana Rozmiaru")
@@ -223,6 +227,7 @@ class Window(QMainWindow):
         self.clearResizer()
         self.setTextCreatorSectionVisibility(False)
         self.setResizerVisabilitySection(True)
+        self.setMovable(True)
 
     def clearResizer(self):
         for item in self.graphics_view.scene.items():
@@ -246,7 +251,7 @@ class Window(QMainWindow):
             y2 = int(self.point_end_y2_edit.text())
 
             if self.selected_tool == ToolSelect.Line.value:
-                self.graphics_view.scene.addItem(Line(QLineF(x1, y1, x2, y2), self.graphics_view.scene))
+                self.graphics_view.scene.addItem(Line(QLineF(x1, y1, x2, y2), self.graphics_view.scene, self.graphics_view.graphic_Pen))
             elif self.selected_tool == ToolSelect.Rectangle.value:
                 self.graphics_view.drawRectangleLogic(x1, y1, x2, y2)
             elif self.selected_tool == ToolSelect.Ellipse.value:
@@ -276,24 +281,34 @@ class Window(QMainWindow):
             msg.exec_()
 
     def setTextCreatorSectionVisibility(self, visible_flag):
-        if visible_flag:
-            for item in self.text_creator_section:
-                item.setVisible(True)
-        elif not visible_flag:
-            for item in self.text_creator_section:
-                item.setVisible(False)
+        for item in self.text_creator_section:
+            item.setVisible(visible_flag)
 
     def setResizerVisabilitySection(self, visible_flag):
-        if visible_flag:
-            for item in self.resizer_text_section:
-                item.setVisible(True)
-        elif not visible_flag:
-            for item in self.resizer_text_section:
-                item.setVisible(False)
+        for item in self.resizer_text_section:
+            item.setVisible(visible_flag)
+
+    def setMovable(self, moveFlag):
+        items = self.graphics_view.scene.items()
+        if items:
+            for item in items:
+                if type(item) is not Resizer:
+                    if self.selected_tool == ToolSelect.Resize.value:
+                        item.setFlag(QGraphicsItem.ItemIsSelectable, moveFlag)
+                        item.setFlag(QGraphicsItem.ItemSendsGeometryChanges, moveFlag)
+                        item.setFlag(QGraphicsItem.ItemIsFocusable, moveFlag)
+                        item.setFlag(QGraphicsItem.ItemIsMovable, not moveFlag)
+                    else:
+                        item.setFlag(QGraphicsItem.ItemIsMovable, moveFlag)
+                        item.setFlag(QGraphicsItem.ItemIsSelectable, moveFlag)
+                        item.setFlag(QGraphicsItem.ItemIsFocusable, moveFlag)
+                        item.setFlag(QGraphicsItem.ItemSendsGeometryChanges, moveFlag)
 
 
 class GraphicsView(QGraphicsView):
     selected_item = None
+    graphic_Pen = QPen(Qt.black)
+    graphic_Pen.setWidth(8)
     def __init__(self, parent=None):
         super(GraphicsView, self).__init__(parent)
         self.setup_ui()
@@ -377,13 +392,13 @@ class GraphicsView(QGraphicsView):
         height = abs(y1 - y2)
 
         if (x1 <= x2) & (y1 <= y2):
-            self.scene.addItem(Rectangle(QRectF(x1, y1, width, height), self.scene))
+            self.scene.addItem(Rectangle(QRectF(x1, y1, width, height), self.scene, self.graphic_Pen))
         elif (x1 >= x2) & (y1 <= y2):
-            self.scene.addItem(Rectangle(QRectF(x2, y2 - height, width, height), self.scene))
+            self.scene.addItem(Rectangle(QRectF(x2, y2 - height, width, height), self.scene, self.graphic_Pen))
         elif (x1 >= x2) & (y1 >= y2):
-            self.scene.addItem(Rectangle(QRectF(x2, y2, width, height), self.scene))
+            self.scene.addItem(Rectangle(QRectF(x2, y2, width, height), self.scene, self.graphic_Pen))
         elif (x1 <= x2) & (y1 >= y2):
-            self.scene.addItem(Rectangle(QRectF(x1, y1 - height, width, height), self.scene))
+            self.scene.addItem(Rectangle(QRectF(x1, y1 - height, width, height), self.scene, self.graphic_Pen))
 
     def drawEllipseLogic(self, x1=None, y1=None, x2=None, y2=None):
         if (x1 is None) | (y1 is None) | (x2 is None) | (y2 is None):
@@ -395,13 +410,13 @@ class GraphicsView(QGraphicsView):
         height = abs(y1 - y2)
 
         if (x1 <= x2) & (y1 <= y2):
-            self.scene.addItem(Ellipse(QRectF(x1, y1, width, height), self.scene))
+            self.scene.addItem(Ellipse(QRectF(x1, y1, width, height), self.scene, self.graphic_Pen))
         elif (x1 >= x2) & (y1 <= y2):
-            self.scene.addItem(Ellipse(QRectF(x2, y2 - height, width, height), self.scene))
+            self.scene.addItem(Ellipse(QRectF(x2, y2 - height, width, height), self.scene, self.graphic_Pen))
         elif (x1 >= x2) & (y1 >= y2):
-            self.scene.addItem(Ellipse(QRectF(x2, y2, width, height), self.scene))
+            self.scene.addItem(Ellipse(QRectF(x2, y2, width, height), self.scene, self.graphic_Pen))
         elif (x1 <= x2) & (y1 >= y2):
-            self.scene.addItem(Ellipse(QRectF(x1, y1 - height, width, height), self.scene))
+            self.scene.addItem(Ellipse(QRectF(x1, y1 - height, width, height), self.scene, self.graphic_Pen))
 
     def drawLineLogic(self):
         x1 = self.parent().start_point_cords.x()
@@ -409,17 +424,18 @@ class GraphicsView(QGraphicsView):
         x2 = self.parent().end_point_cords.x()
         y2 = self.parent().end_point_cords.y()
 
-        line = Line(QLineF(x1, y1, x2, y2), self.scene)
+        line = Line(QLineF(x1, y1, x2, y2), self.scene, self.graphic_Pen)
         self.scene.addItem(line)
 
 
 class Line(QGraphicsLineItem):
-    def __init__(self, line=QLineF(0, 0, 100, 100), scene=None, parent=None):
+    def __init__(self, line=QLineF(0, 0, 100, 100), scene=None, pen=QPen(), parent=None):
         super().__init__(line, parent)
-        self.setFlag(QGraphicsItem.ItemIsSelectable, True)
-        self.setFlag(QGraphicsItem.ItemIsMovable, True)
-        self.setFlag(QGraphicsItem.ItemIsFocusable, True)
-        self.setFlag(QGraphicsItem.ItemSendsGeometryChanges, True)
+        self.setFlag(QGraphicsItem.ItemIsSelectable, False)
+        self.setFlag(QGraphicsItem.ItemIsMovable, False)
+        self.setFlag(QGraphicsItem.ItemIsFocusable, False)
+        self.setFlag(QGraphicsItem.ItemSendsGeometryChanges, False)
+        self.setPen(pen)
 
         self.resizer = Resizer(parent=self)
         resizerWidth = self.resizer.rect.width() / 2
@@ -450,13 +466,14 @@ class Line(QGraphicsLineItem):
 
 
 class Rectangle(QGraphicsRectItem):
-    def __init__(self, rect=QRectF(), scene=None, parent=None):
+    def __init__(self, rect=QRectF(), scene=None, pen=QPen(), parent=None):
         super().__init__(rect, parent)
 
-        self.setFlag(QGraphicsItem.ItemIsSelectable, True)
-        self.setFlag(QGraphicsItem.ItemIsMovable, True)
-        self.setFlag(QGraphicsItem.ItemIsFocusable, True)
-        self.setFlag(QGraphicsItem.ItemSendsGeometryChanges, True)
+        self.setFlag(QGraphicsItem.ItemIsSelectable, False)
+        self.setFlag(QGraphicsItem.ItemIsMovable, False)
+        self.setFlag(QGraphicsItem.ItemIsFocusable, False)
+        self.setFlag(QGraphicsItem.ItemSendsGeometryChanges, False)
+        self.setPen(pen)
 
         self.resizer = Resizer(parent=self)
         resizerWidth = self.resizer.rect.width() / 2
@@ -489,13 +506,14 @@ class Rectangle(QGraphicsRectItem):
 
 
 class Ellipse(QGraphicsEllipseItem):
-    def __init__(self, rect=QRectF(), scene=None, parent=None):
+    def __init__(self, rect=QRectF(), scene=None, pen=QPen(), parent=None):
         super().__init__(rect, parent)
 
-        self.setFlag(QGraphicsItem.ItemIsSelectable, True)
-        self.setFlag(QGraphicsItem.ItemIsMovable, True)
-        self.setFlag(QGraphicsItem.ItemIsFocusable, True)
-        self.setFlag(QGraphicsItem.ItemSendsGeometryChanges, True)
+        self.setFlag(QGraphicsItem.ItemIsSelectable, False)
+        self.setFlag(QGraphicsItem.ItemIsMovable, False)
+        self.setFlag(QGraphicsItem.ItemIsFocusable, False)
+        self.setFlag(QGraphicsItem.ItemSendsGeometryChanges, False)
+        self.setPen(pen)
 
         self.resizer = Resizer(parent=self)
         resizerWidth = self.resizer.rect.width() / 2
