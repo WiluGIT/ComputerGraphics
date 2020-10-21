@@ -2,8 +2,8 @@ from enum import Enum
 
 from PySide2.QtWidgets import QApplication, QMainWindow, QGraphicsScene, QPushButton, \
     QGraphicsView, QGraphicsItem, QLabel, QGraphicsLineItem, QGraphicsRectItem, QGraphicsEllipseItem, QGraphicsObject, \
-    QButtonGroup, QLineEdit, QLayout, QMessageBox, QComboBox
-from PySide2.QtGui import QBrush, QPen, QFont, QPainter, QColor, QRegExpValidator
+    QButtonGroup, QLineEdit, QLayout, QMessageBox, QComboBox, QStyle
+from PySide2.QtGui import QBrush, QPen, QFont, QPainter, QColor, QRegExpValidator, QIcon, QPixmap
 from PySide2.QtCore import Qt, QRect, QPoint, Signal, QPointF, QRectF, Slot, QLineF
 from PySide2 import QtCore
 import sys
@@ -45,29 +45,34 @@ class Window(QMainWindow):
         self.text_creator_section = []
         self.resizer_text_section = []
         # buttons
-        self.select_button = QPushButton("S", self)
+        self.select_button = QPushButton(self)
         self.select_button.setGeometry(20, 10, 30, 30)
         self.select_button.clicked.connect(self.selectItem)
+        self.select_button.setIcon(QIcon(QPixmap("icons/selection.png")))
         self.buttonGroup.addButton(self.select_button)
 
-        self.line_button = QPushButton("L", self)
+        self.line_button = QPushButton(self)
         self.line_button.setGeometry(60, 10, 30, 30)
         self.line_button.clicked.connect(self.drawLine)
+        self.line_button.setIcon(QIcon(QPixmap("icons/line.png")))
         self.buttonGroup.addButton(self.line_button)
 
-        self.rect_button = QPushButton("R", self)
+        self.rect_button = QPushButton(self)
         self.rect_button.setGeometry(100, 10, 30, 30)
         self.rect_button.clicked.connect(self.drawRect)
+        self.rect_button.setIcon(QIcon(QPixmap("icons/rectangle.png")))
         self.buttonGroup.addButton(self.rect_button)
 
-        self.ellipse_button = QPushButton("E", self)
+        self.ellipse_button = QPushButton(self)
         self.ellipse_button.setGeometry(140, 10, 30, 30)
         self.ellipse_button.clicked.connect(self.drawEllipse)
+        self.ellipse_button.setIcon(QIcon(QPixmap("icons/ellipse.png")))
         self.buttonGroup.addButton(self.ellipse_button)
 
-        self.resize_button = QPushButton("Re", self)
+        self.resize_button = QPushButton(self)
         self.resize_button.setGeometry(20, 60, 30, 30)
         self.resize_button.clicked.connect(self.resizeItem)
+        self.resize_button.setIcon(QIcon(QPixmap("icons/resize.png")))
         self.buttonGroup.addButton(self.resize_button)
 
         self.create_shape_button = QPushButton("Create", self)
