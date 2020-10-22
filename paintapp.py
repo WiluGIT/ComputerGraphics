@@ -2,7 +2,8 @@ from enum import Enum
 
 from PySide2.QtWidgets import QApplication, QMainWindow, QGraphicsScene, QPushButton, \
     QGraphicsView, QGraphicsItem, QLabel, QGraphicsLineItem, QGraphicsRectItem, QGraphicsEllipseItem, QGraphicsObject, \
-    QButtonGroup, QLineEdit, QLayout, QMessageBox, QComboBox, QStyle, QMenuBar, QMenu, QAction, QStatusBar
+    QButtonGroup, QLineEdit, QLayout, QMessageBox, QComboBox, QStyle, QMenuBar, QMenu, QAction, QStatusBar, QFileDialog, \
+    QGraphicsPixmapItem
 from PySide2.QtGui import QBrush, QPen, QFont, QPainter, QColor, QRegExpValidator, QIcon, QPixmap
 from PySide2.QtCore import Qt, QRect, QPoint, Signal, QPointF, QRectF, Slot, QLineF
 from PySide2 import QtCore
@@ -46,7 +47,9 @@ class Window(QMainWindow):
         self.setStatusBar(self.statusbar)
         self.actionOpen_File = QAction(self)
         self.actionOpen_File.setText("Open File")
+        self.actionOpen_File.triggered.connect(self.openFile)
         self.actionSave_File = QAction(self)
+        self.actionSave_File.triggered.connect(self.saveFile)
         self.actionSave_File.setText("Save File")
         self.menuOpen_File.addAction(self.actionOpen_File)
         self.menuOpen_File.addSeparator()
@@ -160,6 +163,9 @@ class Window(QMainWindow):
         self.size_select_box_label.setGeometry(1050, 200, 50, 30)
         self.text_creator_section.append(self.size_select_box_label)
 
+        self.path_label = QLabel(self)
+        self.path_label.setGeometry(200, 500, 780, 16)
+
         #line edit
         self.point_start_x1_edit = QLineEdit(self)
         self.point_start_x1_edit.setGeometry(QRect(1080, 130, 30, 30))
@@ -216,6 +222,18 @@ class Window(QMainWindow):
         self.setTextCreatorSectionVisibility(False)
         self.setResizerVisabilitySection(False)
 
+    def openFile(self):
+        filter = "AllFiles (*.jpg *jpeg *.gif *.png *.bmp *.tiff *tif);;JPEG (*.jpg *jpeg);;GIF (*.gif);;PNG(*.png);;BMP (*.bmp);; TIF (*.tiff *.tif)"
+        file = QFileDialog.getOpenFileName(filter=filter)
+        filepath = file[0]
+        pixmap = QPixmap(filepath)
+
+        self.graphics_view.scene.addPixmap(pixmap)
+        self.path_label.setText(filepath)
+
+    def saveFile(self):
+        print("save")
+
     def drawLine(self):
         self.shape_label.setText("Narzędzie: Linia")
         self.clearButtonsBackground(self.line_button)
@@ -269,7 +287,8 @@ class Window(QMainWindow):
     def clearResizer(self):
         for item in self.graphics_view.scene.items():
             obj_type = type(item)
-            if obj_type == Resizer:
+            print(obj_type)
+            if obj_type == Resizer or obj_type == QGraphicsPixmapItem:
                 continue
             item.resizerVisibilityChange(False)
 
@@ -365,6 +384,7 @@ class GraphicsView(QGraphicsView):
         self.setup_ui()
 
     def setup_ui(self):
+
         # scene setup
         self.scene = QGraphicsScene(self)
         self.setScene(self.scene)
