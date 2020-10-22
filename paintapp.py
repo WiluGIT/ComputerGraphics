@@ -2,7 +2,7 @@ from enum import Enum
 
 from PySide2.QtWidgets import QApplication, QMainWindow, QGraphicsScene, QPushButton, \
     QGraphicsView, QGraphicsItem, QLabel, QGraphicsLineItem, QGraphicsRectItem, QGraphicsEllipseItem, QGraphicsObject, \
-    QButtonGroup, QLineEdit, QLayout, QMessageBox, QComboBox, QStyle
+    QButtonGroup, QLineEdit, QLayout, QMessageBox, QComboBox, QStyle, QMenuBar, QMenu, QAction, QStatusBar
 from PySide2.QtGui import QBrush, QPen, QFont, QPainter, QColor, QRegExpValidator, QIcon, QPixmap
 from PySide2.QtCore import Qt, QRect, QPoint, Signal, QPointF, QRectF, Slot, QLineF
 from PySide2 import QtCore
@@ -36,9 +36,26 @@ class Window(QMainWindow):
         self.setMouseTracking(True)
 
     def setup_ui(self):
+        # menu bar setup
+        self.menubar = QMenuBar(self)
+        self.menubar.setGeometry(QtCore.QRect(0, 0, 1300, 1))
+        self.menuOpen_File = QMenu(self.menubar)
+        self.menuOpen_File.setTitle("File")
+        self.setMenuBar(self.menubar)
+        self.statusbar = QStatusBar(self)
+        self.setStatusBar(self.statusbar)
+        self.actionOpen_File = QAction(self)
+        self.actionOpen_File.setText("Open File")
+        self.actionSave_File = QAction(self)
+        self.actionSave_File.setText("Save File")
+        self.menuOpen_File.addAction(self.actionOpen_File)
+        self.menuOpen_File.addSeparator()
+        self.menuOpen_File.addAction(self.actionSave_File)
+        self.menubar.addAction(self.menuOpen_File.menuAction())
+
         # graphics view setup
         self.graphics_view = GraphicsView(self)
-        self.graphics_view.setGeometry(200, 10, self.graphic_view_width, self.graphic_view_height)
+        self.graphics_view.setGeometry(200, 50, self.graphic_view_width, self.graphic_view_height)
 
         # groups and sections
         self.buttonGroup = QButtonGroup()
@@ -46,31 +63,31 @@ class Window(QMainWindow):
         self.resizer_text_section = []
         # buttons
         self.select_button = QPushButton(self)
-        self.select_button.setGeometry(20, 10, 30, 30)
+        self.select_button.setGeometry(20, 50, 30, 30)
         self.select_button.clicked.connect(self.selectItem)
         self.select_button.setIcon(QIcon(QPixmap("icons/selection.png")))
         self.buttonGroup.addButton(self.select_button)
 
         self.line_button = QPushButton(self)
-        self.line_button.setGeometry(60, 10, 30, 30)
+        self.line_button.setGeometry(60, 50, 30, 30)
         self.line_button.clicked.connect(self.drawLine)
         self.line_button.setIcon(QIcon(QPixmap("icons/line.png")))
         self.buttonGroup.addButton(self.line_button)
 
         self.rect_button = QPushButton(self)
-        self.rect_button.setGeometry(100, 10, 30, 30)
+        self.rect_button.setGeometry(100, 50, 30, 30)
         self.rect_button.clicked.connect(self.drawRect)
         self.rect_button.setIcon(QIcon(QPixmap("icons/rectangle.png")))
         self.buttonGroup.addButton(self.rect_button)
 
         self.ellipse_button = QPushButton(self)
-        self.ellipse_button.setGeometry(140, 10, 30, 30)
+        self.ellipse_button.setGeometry(140, 50, 30, 30)
         self.ellipse_button.clicked.connect(self.drawEllipse)
         self.ellipse_button.setIcon(QIcon(QPixmap("icons/ellipse.png")))
         self.buttonGroup.addButton(self.ellipse_button)
 
         self.resize_button = QPushButton(self)
-        self.resize_button.setGeometry(20, 60, 30, 30)
+        self.resize_button.setGeometry(20, 100, 30, 30)
         self.resize_button.clicked.connect(self.resizeItem)
         self.resize_button.setIcon(QIcon(QPixmap("icons/resize.png")))
         self.buttonGroup.addButton(self.resize_button)
@@ -81,96 +98,96 @@ class Window(QMainWindow):
         self.text_creator_section.append(self.create_shape_button)
 
         self.update_shape_button = QPushButton("Update", self)
-        self.update_shape_button.setGeometry(1120, 100, 50, 30)
+        self.update_shape_button.setGeometry(1120, 130, 50, 30)
         self.update_shape_button.clicked.connect(self.updateShape)
         self.resizer_text_section.append(self.update_shape_button)
 
         # labels
         self.mouse_cord_label = QLabel(self)
-        self.mouse_cord_label.setGeometry(QRect(950, 440, 100, 50))
+        self.mouse_cord_label.setGeometry(QRect(950, 480, 100, 50))
         self.mouse_cord_label.setText("(x: {}, y: {})".format(self.mouse_cords.x(), self.mouse_cords.y()))
 
         self.shape_label = QLabel(self)
-        self.shape_label.setGeometry(QRect(1050, 10, 200, 30))
+        self.shape_label.setGeometry(QRect(1050, 40, 200, 30))
         self.shape_label.setText("")
 
         self.creator_label = QLabel(self)
-        self.creator_label.setGeometry(QRect(1050, 40, 200, 30))
+        self.creator_label.setGeometry(QRect(1050, 70, 200, 30))
         self.creator_label.setText("Kreator tekstowy")
         self.text_creator_section.append(self.creator_label)
 
         self.point_start_label = QLabel(self)
-        self.point_start_label.setGeometry(QRect(1050, 70, 200, 30))
+        self.point_start_label.setGeometry(QRect(1050, 100, 200, 30))
         self.point_start_label.setText("Punkt startowy:")
         self.text_creator_section.append(self.point_start_label)
 
         self.point_end_label = QLabel(self)
-        self.point_end_label.setGeometry(QRect(1150, 70, 200, 30))
+        self.point_end_label.setGeometry(QRect(1150, 100, 200, 30))
         self.point_end_label.setText("Punkt końcowy:")
         self.text_creator_section.append(self.point_end_label)
 
         self.width_label = QLabel(self)
-        self.width_label.setGeometry(QRect(1050, 40, 200, 30))
+        self.width_label.setGeometry(QRect(1050, 70, 200, 30))
         self.width_label.setText("Szerokość:")
         self.resizer_text_section.append(self.width_label)
 
         self.height_label = QLabel(self)
-        self.height_label.setGeometry(QRect(1150, 40, 200, 30))
+        self.height_label.setGeometry(QRect(1150, 70, 200, 30))
         self.height_label.setText("Wysokość:")
         self.resizer_text_section.append(self.height_label)
 
         self.point_start_x1_label = QLabel(self)
-        self.point_start_x1_label.setGeometry(QRect(1050, 100, 200, 30))
+        self.point_start_x1_label.setGeometry(QRect(1050, 130, 200, 30))
         self.point_start_x1_label.setText("X1:")
         self.text_creator_section.append(self.point_start_x1_label)
 
         self.point_start_y1_label = QLabel(self)
-        self.point_start_y1_label.setGeometry(QRect(1050, 130, 200, 30))
+        self.point_start_y1_label.setGeometry(QRect(1050, 160, 200, 30))
         self.point_start_y1_label.setText("Y1:")
         self.text_creator_section.append(self.point_start_y1_label)
 
         self.point_end_x2_label = QLabel(self)
-        self.point_end_x2_label.setGeometry(QRect(1150, 100, 200, 30))
+        self.point_end_x2_label.setGeometry(QRect(1150, 130, 200, 30))
         self.point_end_x2_label.setText("X2:")
         self.text_creator_section.append(self.point_end_x2_label)
 
         self.point_end_y2_label = QLabel(self)
-        self.point_end_y2_label.setGeometry(QRect(1150, 130, 200, 30))
+        self.point_end_y2_label.setGeometry(QRect(1150, 160, 200, 30))
         self.point_end_y2_label.setText("Y2:")
         self.text_creator_section.append(self.point_end_y2_label)
 
         self.size_select_box_label = QLabel("Rozmiar:", self)
-        self.size_select_box_label.setGeometry(1050, 170, 50, 30)
+        self.size_select_box_label.setGeometry(1050, 200, 50, 30)
         self.text_creator_section.append(self.size_select_box_label)
 
         #line edit
         self.point_start_x1_edit = QLineEdit(self)
-        self.point_start_x1_edit.setGeometry(QRect(1080, 100, 30, 30))
+        self.point_start_x1_edit.setGeometry(QRect(1080, 130, 30, 30))
         self.text_creator_section.append(self.point_start_x1_edit)
 
         self.point_start_y1_edit = QLineEdit(self)
-        self.point_start_y1_edit.setGeometry(QRect(1080, 130, 30, 30))
+        self.point_start_y1_edit.setGeometry(QRect(1080, 160, 30, 30))
         self.text_creator_section.append(self.point_start_y1_edit)
 
         self.point_end_x2_edit = QLineEdit(self)
-        self.point_end_x2_edit.setGeometry(QRect(1180, 100, 30, 30))
+        self.point_end_x2_edit.setGeometry(QRect(1180, 130, 30, 30))
         self.text_creator_section.append(self.point_end_x2_edit)
 
         self.point_end_y2_edit = QLineEdit(self)
-        self.point_end_y2_edit.setGeometry(QRect(1180, 130, 30, 30))
+        self.point_end_y2_edit.setGeometry(QRect(1180, 160, 30, 30))
         self.text_creator_section.append(self.point_end_y2_edit)
 
         self.width_edit = QLineEdit(self)
-        self.width_edit.setGeometry(QRect(1080, 70, 30, 30))
+        self.width_edit.setGeometry(QRect(1080, 100, 30, 30))
         self.resizer_text_section.append(self.width_edit)
 
         self.height_edit = QLineEdit(self)
-        self.height_edit.setGeometry(QRect(1180, 70, 30, 30))
+        self.height_edit.setGeometry(QRect(1180, 100, 30, 30))
         self.resizer_text_section.append(self.height_edit)
 
         # select box
         self.size_select_box = QComboBox(self)
-        self.size_select_box.setGeometry(1050, 200, 50, 30)
+        self.size_select_box.setGeometry(1050, 230, 50, 30)
         self.size_select_box.addItem("1x")
         self.size_select_box.addItem("2x")
         self.size_select_box.addItem("4x")
