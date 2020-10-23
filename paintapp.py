@@ -1,3 +1,4 @@
+import os
 from enum import Enum
 
 from PySide2.QtWidgets import QApplication, QMainWindow, QGraphicsScene, QPushButton, \
@@ -5,7 +6,7 @@ from PySide2.QtWidgets import QApplication, QMainWindow, QGraphicsScene, QPushBu
     QButtonGroup, QLineEdit, QLayout, QMessageBox, QComboBox, QStyle, QMenuBar, QMenu, QAction, QStatusBar, QFileDialog, \
     QGraphicsPixmapItem
 from PySide2.QtGui import QBrush, QPen, QFont, QPainter, QColor, QRegExpValidator, QIcon, QPixmap
-from PySide2.QtCore import Qt, QRect, QPoint, Signal, QPointF, QRectF, Slot, QLineF
+from PySide2.QtCore import Qt, QRect, QPoint, Signal, QPointF, QRectF, Slot, QLineF, QSize
 from PySide2 import QtCore
 import sys
 
@@ -226,13 +227,16 @@ class Window(QMainWindow):
         filter = "AllFiles (*.jpg *jpeg *.gif *.png *.bmp *.tiff *tif);;JPEG (*.jpg *jpeg);;GIF (*.gif);;PNG(*.png);;BMP (*.bmp);; TIF (*.tiff *.tif)"
         file = QFileDialog.getOpenFileName(filter=filter)
         filepath = file[0]
-        pixmap = QPixmap(filepath)
+        pixmap = QPixmap(filepath).scaled(840, 440, QtCore.Qt.KeepAspectRatio, QtCore.Qt.SmoothTransformation)
 
         self.graphics_view.scene.addPixmap(pixmap)
         self.path_label.setText(filepath)
 
     def saveFile(self):
-        print("save")
+        filter = "JPG (*.jpg);;JPEG (*jpeg);;GIF (*.gif);;PNG(*.png);;BMP (*.bmp);; TIF (*.tif);; TIFF(*.tiff)"
+        filename = QFileDialog.getSaveFileName(caption="Save Image", directory=os.curdir, filter=filter)
+        pixmap = self.graphics_view.grab(self.graphics_view.sceneRect().toRect())
+        result = pixmap.save(filename[0])
 
     def drawLine(self):
         self.shape_label.setText("Narzędzie: Linia")
