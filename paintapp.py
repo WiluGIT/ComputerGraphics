@@ -3,6 +3,8 @@ from enum import Enum
 
 import numpy as np
 from PIL import Image
+import cv2
+#from scipy.misc
 from PySide2.QtWidgets import QApplication, QMainWindow, QGraphicsScene, QPushButton, \
     QGraphicsView, QGraphicsItem, QLabel, QGraphicsLineItem, QGraphicsRectItem, QGraphicsEllipseItem, QGraphicsObject, \
     QButtonGroup, QLineEdit, QLayout, QMessageBox, QComboBox, QStyle, QMenuBar, QMenu, QAction, QStatusBar, QFileDialog, \
@@ -241,7 +243,8 @@ class Window(QMainWindow):
         filepath = file[0]
 
         if filepath.endswith(".ppm"):
-            self.openPpmFile(filepath)
+            #self.openPpmFile(filepath)
+            self.openPpmFileBackup(filepath)
         else:
             self.setPhotoFromPath(filepath)
 
@@ -293,21 +296,86 @@ class Window(QMainWindow):
         ppm_height = int(file_data[2])
         ppm_values = file_data[4:]
 
-        result_array = np.zeros(shape=(ppm_height, ppm_width, 3))
+        result_array = np.zeros(shape=(ppm_height, ppm_width, 3), dtype=np.uint16)
+        # result_array = np.arange(65536, dtype=np.uint16).reshape(256, 256)
+        # print(result_array)
+
+        img = Image.new('RGB', (3, 16), "black")
+        pixels = img.load()
+        print(img.size[0])
+        print(img.size[1])
+
+
         row_index = 0
         col_index = 0
         for j in range(0, len(ppm_values), 3):
-            result_array[row_index, col_index, 0] = ppm_values[j]
-            result_array[row_index, col_index, 1] = ppm_values[j + 1]
-            result_array[row_index, col_index, 2] = ppm_values[j + 2]
+            # result_array[row_index, col_index, 0] = int(ppm_values[j])
+            # result_array[row_index, col_index, 1] = int(ppm_values[j + 1])
+            # result_array[row_index, col_index, 2] = int(ppm_values[j + 2])
+            pixels[col_index, row_index] = (int(ppm_values[j + 2]), int(ppm_values[j + 1]),int(ppm_values[j]))
             col_index += 1
             if col_index == ppm_width:
                 col_index = 0
                 row_index += 1
 
-        img_form_array = Image.fromarray(result_array.astype('uint8'), 'RGB')
+        print(img)
+        img.show()
+        img.save("out/ppm3_out.png")
+        # print(result_array)
+        # print(result_array.dtype)
+
+        #img_form_array = Image.fromarray(result_array.astype('uint8'), "RGB")
+        # path = "out/ppm3_out.tif"
+        # img_form_array.save(path)
+        # img_form_array.save("out/ppm3_out.tiff")
+        # img_form_array.save("out/ppm3_out.png")
+        #self.setPhotoFromPath(path)
+
+
+
+
+        # img = cv2.imread("out/ppm-test-04-p3-16bit.ppm")
+        # print(img)
+        # img_form_array = Image.fromarray(img.astype('uint16'))
+        # path = "out/ppm3_out.png"
+        # img_form_array.save(path)
+
+    def openPpmFileBackup(self, filepath):
+        file_string = ""
+        with open(filepath) as f:
+            for line in f:
+                line = line.partition('#')[0]
+                line = line.rstrip()
+                file_string += line + " "
+
+        file_data = " ".join(file_string.split()).split(' ')
+
+        ppm_format = file_data[0]
+        ppm_width = int(file_data[1])
+        ppm_height = int(file_data[2])
+        ppm_max = int(file_data[3])
+        ppm_values = file_data[4:]
+        channel_type = np.uint16
+
+        if ppm_max < 256:
+            channel_type = np.uint8
+
+        result_array = np.zeros(shape=(ppm_height, ppm_width, 3))
+
+        row_index = 0
+        col_index = 0
+        for j in range(0, len(ppm_values), 3):
+            result_array[row_index, col_index, 0] = int(ppm_values[j + 2]) # B
+            result_array[row_index, col_index, 1] = int(ppm_values[j + 1]) # G
+            result_array[row_index, col_index, 2] = int(ppm_values[j]) # R
+            col_index += 1
+            if col_index == ppm_width:
+                col_index = 0
+                row_index += 1
+
+        print(result_array)
         path = "out/ppm3_out.png"
-        img_form_array.save(path)
+        cv2.imwrite(path, result_array.astype(channel_type))
         self.setPhotoFromPath(path)
 
     def drawLine(self):
