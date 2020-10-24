@@ -239,14 +239,11 @@ class Window(QMainWindow):
         filter = "AllFiles (*.jpg *jpeg *.png *.bmp *.tiff *tif *ppm);;JPEG (*.jpg *jpeg);;PNG(*.png);;BMP (*.bmp);; TIF (*.tiff *.tif);; PPM (*ppm)"
         file = QFileDialog.getOpenFileName(filter=filter)
         filepath = file[0]
-        pixmap = QPixmap(filepath)
-        #if filepath.endswith(".ppm"):
-        self.openPpmFile(filepath)
 
-        self.photo.setPixmap(pixmap)
-        self.path_label.setText(filepath)
-        self.setButtonsDisabled(True)
-        self.photo.setVisible(True)
+        if filepath.endswith(".ppm"):
+            self.openPpmFile(filepath)
+        else:
+            self.setPhotoFromPath(filepath)
 
     def saveFile(self):
         filter = "JPG (*.jpg);;JPEG (*jpeg);;PNG(*.png);;BMP (*.bmp);; TIF (*.tif);; TIFF(*.tiff)"
@@ -260,6 +257,13 @@ class Window(QMainWindow):
         else:
             result = pixmap.save(filename[0])
 
+    def setPhotoFromPath(self, filepath):
+        pixmap = QPixmap(filepath)
+        self.photo.setPixmap(pixmap)
+        self.path_label.setText(filepath)
+        self.setButtonsDisabled(True)
+        self.photo.setVisible(True)
+
     def newPaint(self):
         self.photo.setVisible(False)
         self.setButtonsDisabled(False)
@@ -272,6 +276,9 @@ class Window(QMainWindow):
         return self.window.exec_()
 
     def openPpmFile(self, filepath):
+
+        #str = open(filepath, 'r').read()
+
         file_string = ""
         with open(filepath) as f:
             for line in f:
@@ -279,28 +286,29 @@ class Window(QMainWindow):
                 line = line.rstrip()
                 file_string += line + " "
 
-        # file_data = " ".join(file_string.split()).split(' ')
-        #
-        # ppm_format = file_data[0]
-        # ppm_width = int(file_data[1])
-        # ppm_height = int(file_data[2])
-        # ppm_values = file_data[4:]
-        #
-        # result_array = np.zeros(shape=(ppm_height, ppm_width, 3))
-        # row_index = 0
-        # col_index = 0
-        # for j in range(0, len(ppm_values), 3):
-        #     result_array[row_index, col_index, 0] = ppm_values[j]
-        #     result_array[row_index, col_index, 1] = ppm_values[j + 1]
-        #     result_array[row_index, col_index, 2] = ppm_values[j + 2]
-        #     col_index += 1
-        #     if col_index == ppm_width:
-        #         col_index = 0
-        #         row_index += 1
-        #
-        # print(result_array)
-        # img_filter = Image.fromarray(result_array.astype('uint8'), 'RGB')
-        # img_filter.save("siema.png")
+        file_data = " ".join(file_string.split()).split(' ')
+
+        ppm_format = file_data[0]
+        ppm_width = int(file_data[1])
+        ppm_height = int(file_data[2])
+        ppm_values = file_data[4:]
+
+        result_array = np.zeros(shape=(ppm_height, ppm_width, 3))
+        row_index = 0
+        col_index = 0
+        for j in range(0, len(ppm_values), 3):
+            result_array[row_index, col_index, 0] = ppm_values[j]
+            result_array[row_index, col_index, 1] = ppm_values[j + 1]
+            result_array[row_index, col_index, 2] = ppm_values[j + 2]
+            col_index += 1
+            if col_index == ppm_width:
+                col_index = 0
+                row_index += 1
+
+        img_form_array = Image.fromarray(result_array.astype('uint8'), 'RGB')
+        path = "out/ppm3_out.png"
+        img_form_array.save(path)
+        self.setPhotoFromPath(path)
 
     def drawLine(self):
         self.shape_label.setText("Narzędzie: Linia")
