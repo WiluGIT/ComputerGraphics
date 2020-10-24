@@ -1,10 +1,12 @@
 import os
 from enum import Enum
 
+import numpy as np
+from PIL import Image
 from PySide2.QtWidgets import QApplication, QMainWindow, QGraphicsScene, QPushButton, \
     QGraphicsView, QGraphicsItem, QLabel, QGraphicsLineItem, QGraphicsRectItem, QGraphicsEllipseItem, QGraphicsObject, \
     QButtonGroup, QLineEdit, QLayout, QMessageBox, QComboBox, QStyle, QMenuBar, QMenu, QAction, QStatusBar, QFileDialog, \
-    QGraphicsPixmapItem
+    QGraphicsPixmapItem, QDialogButtonBox, QSlider, QDialog
 from PySide2.QtGui import QBrush, QPen, QFont, QPainter, QColor, QRegExpValidator, QIcon, QPixmap
 from PySide2.QtCore import Qt, QRect, QPoint, Signal, QPointF, QRectF, Slot, QLineF, QSize
 from PySide2 import QtCore
@@ -52,6 +54,11 @@ class Window(QMainWindow):
         self.actionSave_File = QAction(self)
         self.actionSave_File.triggered.connect(self.saveFile)
         self.actionSave_File.setText("Save File")
+        self.actionNewPaintWindow_File = QAction(self)
+        self.actionNewPaintWindow_File.triggered.connect(self.newPaint)
+        self.actionNewPaintWindow_File.setText("New Paint Window")
+        self.menuOpen_File.addAction(self.actionNewPaintWindow_File)
+        self.menuOpen_File.addSeparator()
         self.menuOpen_File.addAction(self.actionOpen_File)
         self.menuOpen_File.addSeparator()
         self.menuOpen_File.addAction(self.actionSave_File)
@@ -107,6 +114,11 @@ class Window(QMainWindow):
         self.resizer_text_section.append(self.update_shape_button)
 
         # labels
+        self.photo = QLabel(self)
+        self.photo.setGeometry(200, 50, self.graphic_view_width, self.graphic_view_height)
+        self.photo.setScaledContents(True)
+        self.photo.setVisible(False)
+
         self.mouse_cord_label = QLabel(self)
         self.mouse_cord_label.setGeometry(QRect(950, 480, 100, 50))
         self.mouse_cord_label.setText("(x: {}, y: {})".format(self.mouse_cords.x(), self.mouse_cords.y()))
@@ -224,19 +236,71 @@ class Window(QMainWindow):
         self.setResizerVisabilitySection(False)
 
     def openFile(self):
-        filter = "AllFiles (*.jpg *jpeg *.gif *.png *.bmp *.tiff *tif);;JPEG (*.jpg *jpeg);;GIF (*.gif);;PNG(*.png);;BMP (*.bmp);; TIF (*.tiff *.tif)"
+        filter = "AllFiles (*.jpg *jpeg *.png *.bmp *.tiff *tif *ppm);;JPEG (*.jpg *jpeg);;PNG(*.png);;BMP (*.bmp);; TIF (*.tiff *.tif);; PPM (*ppm)"
         file = QFileDialog.getOpenFileName(filter=filter)
         filepath = file[0]
-        pixmap = QPixmap(filepath).scaled(840, 440, QtCore.Qt.KeepAspectRatio, QtCore.Qt.SmoothTransformation)
+        pixmap = QPixmap(filepath)
+        #if filepath.endswith(".ppm"):
+        self.openPpmFile(filepath)
 
-        self.graphics_view.scene.addPixmap(pixmap)
+        self.photo.setPixmap(pixmap)
         self.path_label.setText(filepath)
+        self.setButtonsDisabled(True)
+        self.photo.setVisible(True)
 
     def saveFile(self):
-        filter = "JPG (*.jpg);;JPEG (*jpeg);;GIF (*.gif);;PNG(*.png);;BMP (*.bmp);; TIF (*.tif);; TIFF(*.tiff)"
+        filter = "JPG (*.jpg);;JPEG (*jpeg);;PNG(*.png);;BMP (*.bmp);; TIF (*.tif);; TIFF(*.tiff)"
         filename = QFileDialog.getSaveFileName(caption="Save Image", directory=os.curdir, filter=filter)
-        pixmap = self.graphics_view.grab(self.graphics_view.sceneRect().toRect())
-        result = pixmap.save(filename[0])
+
+        pixmap = self.photo.pixmap()
+        if (filename[1] == "JPG (*.jpg)") or (filename[1] == "JPEG (*jpeg)"):
+            returnCode = self.showDialog()
+            if returnCode == 1:
+                result = pixmap.save(filename[0], None, self.ui.getValue())
+        else:
+            result = pixmap.save(filename[0])
+
+    def newPaint(self):
+        self.photo.setVisible(False)
+        self.setButtonsDisabled(False)
+
+    def showDialog(self):
+        self.window = QDialog()
+        self.ui = Ui_Dialog()
+        self.ui.setupUi(self.window)
+        self.window.show()
+        return self.window.exec_()
+
+    def openPpmFile(self, filepath):
+        file_string = ""
+        with open(filepath) as f:
+            for line in f:
+                line = line.partition('#')[0]
+                line = line.rstrip()
+                file_string += line + " "
+
+        # file_data = " ".join(file_string.split()).split(' ')
+        #
+        # ppm_format = file_data[0]
+        # ppm_width = int(file_data[1])
+        # ppm_height = int(file_data[2])
+        # ppm_values = file_data[4:]
+        #
+        # result_array = np.zeros(shape=(ppm_height, ppm_width, 3))
+        # row_index = 0
+        # col_index = 0
+        # for j in range(0, len(ppm_values), 3):
+        #     result_array[row_index, col_index, 0] = ppm_values[j]
+        #     result_array[row_index, col_index, 1] = ppm_values[j + 1]
+        #     result_array[row_index, col_index, 2] = ppm_values[j + 2]
+        #     col_index += 1
+        #     if col_index == ppm_width:
+        #         col_index = 0
+        #         row_index += 1
+        #
+        # print(result_array)
+        # img_filter = Image.fromarray(result_array.astype('uint8'), 'RGB')
+        # img_filter.save("siema.png")
 
     def drawLine(self):
         self.shape_label.setText("Narzędzie: Linia")
@@ -302,6 +366,10 @@ class Window(QMainWindow):
                 button.setStyleSheet("background-color: red")
             else:
                 button.setStyleSheet("background-color: none")
+
+    def setButtonsDisabled(self, disableFlag):
+        for button in self.buttonGroup.buttons():
+            button.setDisabled(disableFlag)
 
     def textDraw(self):
         try:
@@ -645,6 +713,48 @@ class Resizer(QGraphicsObject):
             if self.isSelected():
                 self.resizeSignal.emit(value - self.pos())
         return value
+
+class Ui_Dialog(QDialog):
+    def setupUi(self, Dialog):
+        Dialog.resize(400, 200)
+        font = QFont()
+        font.setPointSize(23)
+
+        self.value = 80
+
+        self.buttonBox = QDialogButtonBox(Dialog)
+        self.buttonBox.setGeometry(QtCore.QRect(30, 160, 341, 32))
+        self.buttonBox.setOrientation(QtCore.Qt.Horizontal)
+        self.buttonBox.setStandardButtons(QDialogButtonBox.Cancel|QDialogButtonBox.Ok)
+
+        self.quality_label = QLabel("Quality:", Dialog)
+        self.quality_label.setGeometry(QtCore.QRect(20, 30, 366, 41))
+        self.quality_label.setFont(font)
+
+        self.startValue = QLabel("0", Dialog)
+        self.startValue.setGeometry(QtCore.QRect(10, 90, 42, 61))
+        self.startValue.setFont(font)
+
+        self.endValue = QLabel("80", Dialog)
+        self.endValue.setGeometry(QtCore.QRect(350, 90, 41, 51))
+        self.endValue.setFont(font)
+
+        self.horizontalSlider = QSlider(Dialog)
+        self.horizontalSlider.setGeometry(QtCore.QRect(50, 100, 271, 41))
+        self.horizontalSlider.setOrientation(QtCore.Qt.Horizontal)
+        self.horizontalSlider.valueChanged.connect(self.sliderValueChange)
+        self.horizontalSlider.setValue(self.value)
+
+        self.buttonBox.accepted.connect(Dialog.accept)
+        self.buttonBox.rejected.connect(Dialog.reject)
+        QtCore.QMetaObject.connectSlotsByName(Dialog)
+
+    def sliderValueChange(self):
+        self.value = self.horizontalSlider.value()
+        self.endValue.setText(str(self.value))
+
+    def getValue(self):
+        return self.value
 
 
 app = QApplication(sys.argv)
