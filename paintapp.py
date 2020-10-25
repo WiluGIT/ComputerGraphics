@@ -280,112 +280,94 @@ class Window(QMainWindow):
         return self.window.exec_()
 
     def openPpmFile(self, filepath):
-        data = []
-        ppm_params_dict = {}
-        with open(filepath, errors="ignore") as f:
-            file_pos = 0
-            for line in f:
-                file_pos += len(line)
-                line = line.partition('#')[0]
-                line = line.rstrip().split()
-                if line == "":
-                    continue
-                data += line
-                if len(data) == 4:
-                    break
-
-            ppm_params_dict["ppm_format"] = data[0]
-            ppm_params_dict["ppm_width"] = int(data[1])
-            ppm_params_dict["ppm_height"] = int(data[2])
-            ppm_params_dict["ppm_max"] = int(data[3])
-
-            if ppm_params_dict["ppm_format"] == 'P3':
-                data = []
+        try:
+            data = []
+            ppm_params_dict = {}
+            with open(filepath, errors="ignore") as f:
+                file_pos = 0
                 for line in f:
+                    file_pos += len(line)
                     line = line.partition('#')[0]
                     line = line.rstrip().split()
+                    if line == "":
+                        continue
                     data += line
+                    if len(data) == 4:
+                        break
+
+                ppm_params_dict["ppm_format"] = data[0]
+                ppm_params_dict["ppm_width"] = int(data[1])
+                ppm_params_dict["ppm_height"] = int(data[2])
+                ppm_params_dict["ppm_max"] = int(data[3])
+
+                if ppm_params_dict["ppm_format"] == 'P3':
+                    data = []
+                    for line in f:
+                        line = line.partition('#')[0]
+                        line = line.rstrip().split()
+                        data += line
+                elif ppm_params_dict["ppm_format"] == 'P6':
+                    f.close()
+                    data = []
+                    with open(filepath, "rb") as f:
+                        f.seek(file_pos)
+                        while True:
+                            byte = f.read(1)
+                            if not byte:
+                                break
+                            data.append(ord(byte))
+                else:
+                    raise Exception("File must have P3/P6 PPM format")
+
+                proper_values_count = ppm_params_dict["ppm_width"] * ppm_params_dict["ppm_height"] * 3
+                if len(data) != proper_values_count:
+                    raise Exception("File has wrong count of pixel values")
+
+                if any(int(i) > ppm_params_dict["ppm_max"] for i in data):
+                    raise Exception("Pixel values in files are bigger than max pixel value")
+
+            channel_type = np.uint16
+            max_value = 65535
+            if ppm_params_dict["ppm_max"] < 256:
+                channel_type = np.uint8
+                max_value = 255
+
+            result_array = np.zeros(shape=(ppm_params_dict["ppm_height"], ppm_params_dict["ppm_width"], 3))
+
+            row_index = 0
+            col_index = 0
+            if (ppm_params_dict["ppm_max"] < 255) or (65535 > ppm_params_dict["ppm_max"] > 255):
+                for j in range(0, len(data), 3):
+                    result_array[row_index, col_index, 0] = int(
+                        self.scaleBetween(int(data[j + 2]), 0, max_value, 0, ppm_params_dict["ppm_max"]))  # B
+                    result_array[row_index, col_index, 1] = int(
+                        self.scaleBetween(int(data[j + 1]), 0, max_value, 0, ppm_params_dict["ppm_max"]))  # G
+                    result_array[row_index, col_index, 2] = int(
+                        self.scaleBetween(int(data[j]), 0, max_value, 0, ppm_params_dict["ppm_max"]))  # R
+                    col_index += 1
+                    if col_index == ppm_params_dict["ppm_width"]:
+                        col_index = 0
+                        row_index += 1
             else:
-                f.close()
-                data = []
-                with open(filepath, "rb") as f:
-                    f.seek(file_pos)
-                    while True:
-                        byte = f.read(1)
-                        if not byte:
-                            break
-                        data.append(ord(byte))
+                for j in range(0, len(data), 3):
+                    result_array[row_index, col_index, 0] = int(data[j + 2])  # B
+                    result_array[row_index, col_index, 1] = int(data[j + 1])  # G
+                    result_array[row_index, col_index, 2] = int(data[j])  # R
+                    col_index += 1
+                    if col_index == ppm_params_dict["ppm_width"]:
+                        col_index = 0
+                        row_index += 1
 
-        channel_type = np.uint16
-        max_value = 65535
-        if ppm_params_dict["ppm_max"] < 256:
-            channel_type = np.uint8
-            max_value = 255
-
-        result_array = np.zeros(shape=(ppm_params_dict["ppm_height"], ppm_params_dict["ppm_width"], 3))
-
-        row_index = 0
-        col_index = 0
-        if (ppm_params_dict["ppm_max"] < 255) or (65535 > ppm_params_dict["ppm_max"] > 255):
-            for j in range(0, len(data), 3):
-                result_array[row_index, col_index, 0] = int(self.scaleBetween(int(data[j + 2]), 0, max_value, 0, ppm_params_dict["ppm_max"]))  # B
-                result_array[row_index, col_index, 1] = int(self.scaleBetween(int(data[j + 1]), 0, max_value, 0, ppm_params_dict["ppm_max"]))  # G
-                result_array[row_index, col_index, 2] = int(self.scaleBetween(int(data[j]), 0, max_value, 0, ppm_params_dict["ppm_max"]))  # R
-                col_index += 1
-                if col_index == ppm_params_dict["ppm_width"]:
-                    col_index = 0
-                    row_index += 1
-        else:
-            for j in range(0, len(data), 3):
-                result_array[row_index, col_index, 0] = int(data[j + 2])  # B
-                result_array[row_index, col_index, 1] = int(data[j + 1])  # G
-                result_array[row_index, col_index, 2] = int(data[j])  # R
-                col_index += 1
-                if col_index == ppm_params_dict["ppm_width"]:
-                    col_index = 0
-                    row_index += 1
-
-        path = "out/ppm3_out.png"
-        cv2.imwrite(path, result_array.astype(channel_type))
-        self.setPhotoFromPath(path)
-
-    def openPpmFileBackup(self, filepath):
-        file_string = ""
-        with open(filepath) as f:
-            for line in f:
-                line = line.partition('#')[0]
-                line = line.rstrip()
-                file_string += line + " "
-
-        file_data = " ".join(file_string.split()).split(' ')
-
-        ppm_format = file_data[0]
-        ppm_width = int(file_data[1])
-        ppm_height = int(file_data[2])
-        ppm_max = int(file_data[3])
-        ppm_values = file_data[4:]
-        channel_type = np.uint16
-
-        if ppm_max < 256:
-            channel_type = np.uint8
-
-        result_array = np.zeros(shape=(ppm_height, ppm_width, 3))
-
-        row_index = 0
-        col_index = 0
-        for j in range(0, len(ppm_values), 3):
-            result_array[row_index, col_index, 0] = int(ppm_values[j + 2])  # B
-            result_array[row_index, col_index, 1] = int(ppm_values[j + 1])  # G
-            result_array[row_index, col_index, 2] = int(ppm_values[j])  # R
-            col_index += 1
-            if col_index == ppm_width:
-                col_index = 0
-                row_index += 1
-
-        print(result_array)
-        path = "out/ppm3_out.png"
-        cv2.imwrite(path, result_array.astype(channel_type))
-        self.setPhotoFromPath(path)
+            path = "out/ppm3_out.png"
+            cv2.imwrite(path, result_array.astype(channel_type))
+            self.setPhotoFromPath(path)
+        except Exception as error:
+            msg = QMessageBox()
+            msg.setIcon(QMessageBox.Warning)
+            msg.setText(str(error))
+            msg.setWindowTitle("Warning!")
+            msg.setStandardButtons(QMessageBox.Ok)
+            msg.exec_()
 
     def scaleBetween(self, unscaledNum, minAllowed, maxAllowed, min, max):
         return (maxAllowed - minAllowed) * (unscaledNum - min) / (max - min) + minAllowed
