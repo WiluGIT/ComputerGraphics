@@ -261,9 +261,7 @@ class Window(QMainWindow):
 
     def setPhotoFromPath(self, filepath):
         image = QImage(filepath)
-        print(image.size())
         scaledImg = image.scaled(840, 440, Qt.IgnoreAspectRatio)
-        print(scaledImg.size())
         pixmap = QPixmap(scaledImg)
         self.photo.setPixmap(pixmap)
         self.path_label.setText(filepath)
@@ -445,7 +443,6 @@ class Window(QMainWindow):
     def clearResizer(self):
         for item in self.graphics_view.scene.items():
             obj_type = type(item)
-            print(obj_type)
             if obj_type == Resizer or obj_type == QGraphicsPixmapItem:
                 continue
             item.resizerVisibilityChange(False)
