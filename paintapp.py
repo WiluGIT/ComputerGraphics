@@ -9,7 +9,7 @@ from PySide2.QtWidgets import QApplication, QMainWindow, QGraphicsScene, QPushBu
     QGraphicsView, QGraphicsItem, QLabel, QGraphicsLineItem, QGraphicsRectItem, QGraphicsEllipseItem, QGraphicsObject, \
     QButtonGroup, QLineEdit, QLayout, QMessageBox, QComboBox, QStyle, QMenuBar, QMenu, QAction, QStatusBar, QFileDialog, \
     QGraphicsPixmapItem, QDialogButtonBox, QSlider, QDialog
-from PySide2.QtGui import QBrush, QPen, QFont, QPainter, QColor, QRegExpValidator, QIcon, QPixmap
+from PySide2.QtGui import QBrush, QPen, QFont, QPainter, QColor, QRegExpValidator, QIcon, QPixmap, QImage
 from PySide2.QtCore import Qt, QRect, QPoint, Signal, QPointF, QRectF, Slot, QLineF, QSize
 from PySide2 import QtCore
 import sys
@@ -118,7 +118,6 @@ class Window(QMainWindow):
         # labels
         self.photo = QLabel(self)
         self.photo.setGeometry(200, 50, self.graphic_view_width, self.graphic_view_height)
-        self.photo.setScaledContents(True)
         self.photo.setVisible(False)
 
         self.mouse_cord_label = QLabel(self)
@@ -261,7 +260,11 @@ class Window(QMainWindow):
             result = pixmap.save(filename[0])
 
     def setPhotoFromPath(self, filepath):
-        pixmap = QPixmap(filepath)
+        image = QImage(filepath)
+        print(image.size())
+        scaledImg = image.scaled(840, 440, Qt.IgnoreAspectRatio)
+        print(scaledImg.size())
+        pixmap = QPixmap(scaledImg)
         self.photo.setPixmap(pixmap)
         self.path_label.setText(filepath)
         self.setButtonsDisabled(True)
