@@ -281,7 +281,7 @@ class Window(QMainWindow):
     def openPpmFile(self, filepath):
         data = []
         ppm_params_dict = {}
-        with open(filepath, "r+") as f:
+        with open(filepath, errors="ignore") as f:
             file_pos = 0
             for line in f:
                 file_pos += len(line)
@@ -314,8 +314,6 @@ class Window(QMainWindow):
                         if not byte:
                             break
                         data.append(ord(byte))
-                        # print(byte)
-                        print(ord(byte))
 
         channel_type = np.uint16
         if ppm_params_dict["ppm_max"] < 256:
