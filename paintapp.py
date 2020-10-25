@@ -243,8 +243,8 @@ class Window(QMainWindow):
         filepath = file[0]
 
         if filepath.endswith(".ppm"):
-            #self.openPpmFile(filepath)
-            self.openPpmFileBackup(filepath)
+            self.openPpmFile(filepath)
+            #self.openPpmFileBackup(filepath)
         else:
             self.setPhotoFromPath(filepath)
 
@@ -279,66 +279,64 @@ class Window(QMainWindow):
         return self.window.exec_()
 
     def openPpmFile(self, filepath):
-
-        #str = open(filepath, 'r').read()
-
-        file_string = ""
-        with open(filepath) as f:
+        data = []
+        ppm_params_dict = {}
+        with open(filepath, "r+") as f:
+            file_pos = 0
             for line in f:
+                file_pos += len(line)
                 line = line.partition('#')[0]
-                line = line.rstrip()
-                file_string += line + " "
+                line = line.rstrip().split()
+                if line == "":
+                    continue
+                data += line
+                if len(data) == 4:
+                    break
 
-        file_data = " ".join(file_string.split()).split(' ')
+            ppm_params_dict["ppm_format"] = data[0]
+            ppm_params_dict["ppm_width"] = int(data[1])
+            ppm_params_dict["ppm_height"] = int(data[2])
+            ppm_params_dict["ppm_max"] = int(data[3])
 
-        ppm_format = file_data[0]
-        ppm_width = int(file_data[1])
-        ppm_height = int(file_data[2])
-        ppm_values = file_data[4:]
+            if ppm_params_dict["ppm_format"] == 'P3':
+                data = []
+                for line in f:
+                    line = line.partition('#')[0]
+                    line = line.rstrip().split()
+                    data += line
+            else:
+                f.close()
+                data = []
+                with open(filepath, "rb") as f:
+                    f.seek(file_pos)
+                    while True:
+                        byte = f.read(1)
+                        if not byte:
+                            break
+                        data.append(ord(byte))
+                        # print(byte)
+                        print(ord(byte))
 
-        result_array = np.zeros(shape=(ppm_height, ppm_width, 3), dtype=np.uint16)
-        # result_array = np.arange(65536, dtype=np.uint16).reshape(256, 256)
-        # print(result_array)
+        channel_type = np.uint16
+        if ppm_params_dict["ppm_max"] < 256:
+            channel_type = np.uint8
 
-        img = Image.new('RGB', (3, 16), "black")
-        pixels = img.load()
-        print(img.size[0])
-        print(img.size[1])
-
+        result_array = np.zeros(shape=(ppm_params_dict["ppm_height"], ppm_params_dict["ppm_width"], 3))
 
         row_index = 0
         col_index = 0
-        for j in range(0, len(ppm_values), 3):
-            # result_array[row_index, col_index, 0] = int(ppm_values[j])
-            # result_array[row_index, col_index, 1] = int(ppm_values[j + 1])
-            # result_array[row_index, col_index, 2] = int(ppm_values[j + 2])
-            pixels[col_index, row_index] = (int(ppm_values[j + 2]), int(ppm_values[j + 1]),int(ppm_values[j]))
+        for j in range(0, len(data), 3):
+            result_array[row_index, col_index, 0] = int(data[j + 2])  # B
+            result_array[row_index, col_index, 1] = int(data[j + 1])  # G
+            result_array[row_index, col_index, 2] = int(data[j])  # R
             col_index += 1
-            if col_index == ppm_width:
+            if col_index == ppm_params_dict["ppm_width"]:
                 col_index = 0
                 row_index += 1
 
-        print(img)
-        img.show()
-        img.save("out/ppm3_out.png")
-        # print(result_array)
-        # print(result_array.dtype)
-
-        #img_form_array = Image.fromarray(result_array.astype('uint8'), "RGB")
-        # path = "out/ppm3_out.tif"
-        # img_form_array.save(path)
-        # img_form_array.save("out/ppm3_out.tiff")
-        # img_form_array.save("out/ppm3_out.png")
-        #self.setPhotoFromPath(path)
-
-
-
-
-        # img = cv2.imread("out/ppm-test-04-p3-16bit.ppm")
-        # print(img)
-        # img_form_array = Image.fromarray(img.astype('uint16'))
-        # path = "out/ppm3_out.png"
-        # img_form_array.save(path)
+        path = "out/ppm3_out.png"
+        cv2.imwrite(path, result_array.astype(channel_type))
+        self.setPhotoFromPath(path)
 
     def openPpmFileBackup(self, filepath):
         file_string = ""
@@ -365,9 +363,9 @@ class Window(QMainWindow):
         row_index = 0
         col_index = 0
         for j in range(0, len(ppm_values), 3):
-            result_array[row_index, col_index, 0] = int(ppm_values[j + 2]) # B
-            result_array[row_index, col_index, 1] = int(ppm_values[j + 1]) # G
-            result_array[row_index, col_index, 2] = int(ppm_values[j]) # R
+            result_array[row_index, col_index, 0] = int(ppm_values[j + 2])  # B
+            result_array[row_index, col_index, 1] = int(ppm_values[j + 1])  # G
+            result_array[row_index, col_index, 2] = int(ppm_values[j])  # R
             col_index += 1
             if col_index == ppm_width:
                 col_index = 0
