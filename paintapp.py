@@ -391,15 +391,60 @@ class Window(QMainWindow):
                 ppm_params_dict["ppm_height"] = int(data[2])
                 ppm_params_dict["ppm_max"] = int(data[3])
 
+                channel_type = np.uint16
+                max_value = 65535
+                if ppm_params_dict["ppm_max"] < 256:
+                    channel_type = np.uint8
+                    max_value = 255
+
+                result_array = np.zeros(shape=(ppm_params_dict["ppm_height"], ppm_params_dict["ppm_width"], 3))
+
                 if ppm_params_dict["ppm_format"] == 'P3':
                     if len(data) > 4:
                         data = data[4:]
                     else:
                         data = []
-                    for line in f:
-                        line = line.partition('#')[0]
-                        line = line.rstrip().split()
-                        data += line
+                    row_index = 0
+                    col_index = 0
+                    if (ppm_params_dict["ppm_max"] < 255) or (65535 > ppm_params_dict["ppm_max"] > 255):
+                        for line in f:
+                            line = line.partition('#')[0]
+                            line = line.rstrip().split()
+                            data += line
+                            if len(data) == ppm_params_dict["ppm_width"] * 3:
+                                for j in range(0, len(data), 3):
+                                    result_array[row_index, col_index, 0] = int(
+                                        self.scaleBetween(int(data[j + 2]), 0, max_value, 0,
+                                                          ppm_params_dict["ppm_max"]))  # B
+                                    result_array[row_index, col_index, 1] = int(
+                                        self.scaleBetween(int(data[j + 1]), 0, max_value, 0,
+                                                          ppm_params_dict["ppm_max"]))  # G
+                                    result_array[row_index, col_index, 2] = int(
+                                        self.scaleBetween(int(data[j]), 0, max_value, 0,
+                                                          ppm_params_dict["ppm_max"]))  # R
+                                    col_index += 1
+                                    if col_index == ppm_params_dict["ppm_width"]:
+                                        col_index = 0
+                                        row_index += 1
+                                        data = []
+                                        break
+                    else:
+                        for line in f:
+                            line = line.partition('#')[0]
+                            line = line.rstrip().split()
+                            data += line
+                            if len(data) == ppm_params_dict["ppm_width"] * 3:
+                                for j in range(0, len(data), 3):
+                                    result_array[row_index, col_index, 0] = int(data[j + 2])  # B
+                                    result_array[row_index, col_index, 1] = int(data[j + 1])  # G
+                                    result_array[row_index, col_index, 2] = int(data[j])  # R
+                                    col_index += 1
+                                    if col_index == ppm_params_dict["ppm_width"]:
+                                        col_index = 0
+                                        row_index += 1
+                                        data = []
+                                        break
+
                 elif ppm_params_dict["ppm_format"] == 'P6':
                     f.close()
                     data = []
@@ -414,43 +459,11 @@ class Window(QMainWindow):
                     raise Exception("File must have P3/P6 PPM format")
 
                 proper_values_count = ppm_params_dict["ppm_width"] * ppm_params_dict["ppm_height"] * 3
-                if len(data) != proper_values_count :
-                    raise Exception("File has wrong count of pixel values")
-
-                if any(int(i) > ppm_params_dict["ppm_max"] for i in data):
-                    raise Exception("Pixel values in files are bigger than max pixel value")
-
-            channel_type = np.uint16
-            max_value = 65535
-            if ppm_params_dict["ppm_max"] < 256:
-                channel_type = np.uint8
-                max_value = 255
-
-            result_array = np.zeros(shape=(ppm_params_dict["ppm_height"], ppm_params_dict["ppm_width"], 3))
-
-            row_index = 0
-            col_index = 0
-            if (ppm_params_dict["ppm_max"] < 255) or (65535 > ppm_params_dict["ppm_max"] > 255):
-                for j in range(0, len(data), 3):
-                    result_array[row_index, col_index, 0] = int(
-                        self.scaleBetween(int(data[j + 2]), 0, max_value, 0, ppm_params_dict["ppm_max"]))  # B
-                    result_array[row_index, col_index, 1] = int(
-                        self.scaleBetween(int(data[j + 1]), 0, max_value, 0, ppm_params_dict["ppm_max"]))  # G
-                    result_array[row_index, col_index, 2] = int(
-                        self.scaleBetween(int(data[j]), 0, max_value, 0, ppm_params_dict["ppm_max"]))  # R
-                    col_index += 1
-                    if col_index == ppm_params_dict["ppm_width"]:
-                        col_index = 0
-                        row_index += 1
-            else:
-                for j in range(0, len(data), 3):
-                    result_array[row_index, col_index, 0] = int(data[j + 2])  # B
-                    result_array[row_index, col_index, 1] = int(data[j + 1])  # G
-                    result_array[row_index, col_index, 2] = int(data[j])  # R
-                    col_index += 1
-                    if col_index == ppm_params_dict["ppm_width"]:
-                        col_index = 0
-                        row_index += 1
+                # if len(data) != proper_values_count:
+                #     raise Exception("File has wrong count of pixel values")
+                #
+                # if any(int(i) > ppm_params_dict["ppm_max"] for i in data):
+                #     raise Exception("Pixel values in files are bigger than max pixel value")
 
             print(result_array)
             path = "out/ppm3_out.png"
