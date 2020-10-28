@@ -448,13 +448,50 @@ class Window(QMainWindow):
                 elif ppm_params_dict["ppm_format"] == 'P6':
                     f.close()
                     data = []
+                    row_index = 0
+                    col_index = 0
                     with open(filepath, "rb") as f:
                         f.seek(file_pos)
-                        while True:
-                            byte = f.read(1)
-                            if not byte:
-                                break
-                            data.append(ord(byte))
+                        if (ppm_params_dict["ppm_max"] < 255) or (65535 > ppm_params_dict["ppm_max"] > 255):
+                            while True:
+                                byte = f.read(1)
+                                if not byte:
+                                    break
+                                data.append(ord(byte))
+                                if len(data) == ppm_params_dict["ppm_width"] * 3:
+                                    for j in range(0, len(data), 3):
+                                        result_array[row_index, col_index, 0] = int(
+                                            self.scaleBetween(int(data[j + 2]), 0, max_value, 0,
+                                                              ppm_params_dict["ppm_max"]))  # B
+                                        result_array[row_index, col_index, 1] = int(
+                                            self.scaleBetween(int(data[j + 1]), 0, max_value, 0,
+                                                              ppm_params_dict["ppm_max"]))  # G
+                                        result_array[row_index, col_index, 2] = int(
+                                            self.scaleBetween(int(data[j]), 0, max_value, 0,
+                                                              ppm_params_dict["ppm_max"]))  # R
+                                        col_index += 1
+                                        if col_index == ppm_params_dict["ppm_width"]:
+                                            col_index = 0
+                                            row_index += 1
+                                            data = []
+                                            break
+                        else:
+                            while True:
+                                byte = f.read(1)
+                                if not byte:
+                                    break
+                                data.append(ord(byte))
+                                if len(data) == ppm_params_dict["ppm_width"] * 3:
+                                    for j in range(0, len(data), 3):
+                                        result_array[row_index, col_index, 0] = int(data[j + 2])  # B
+                                        result_array[row_index, col_index, 1] = int(data[j + 1])  # G
+                                        result_array[row_index, col_index, 2] = int(data[j])  # R
+                                        col_index += 1
+                                        if col_index == ppm_params_dict["ppm_width"]:
+                                            col_index = 0
+                                            row_index += 1
+                                            data = []
+                                            break
                 else:
                     raise Exception("File must have P3/P6 PPM format")
 
