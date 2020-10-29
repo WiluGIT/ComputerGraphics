@@ -246,7 +246,11 @@ class Window(QMainWindow):
         self.setResizerVisabilitySection(False)
 
     def select_color_window(self):
-        print("siema")
+        self.window = QDialog()
+        self.ui = Color_Dialog()
+        self.ui.setupUi(self.window)
+        self.window.show()
+        return self.window.exec_()
 
     def openFile(self):
         filter = "AllFiles (*.jpg *jpeg *.png *.bmp *.tiff *tif *ppm);;JPEG (*.jpg *jpeg);;PNG(*.png);;BMP (*.bmp);; TIF (*.tiff *.tif);; PPM (*ppm)"
@@ -890,6 +894,88 @@ class Ui_Dialog(QDialog):
 
     def getValue(self):
         return self.value
+
+class Color_Dialog(object):
+    def setupUi(self, Dialog):
+        Dialog.resize(491, 287)
+        font = QFont()
+        font.setPointSize(15)
+        font.setBold(True)
+        font.setWeight(75)
+
+        self.buttonBox = QDialogButtonBox(Dialog)
+        self.buttonBox.setGeometry(QtCore.QRect(280, 240, 171, 32))
+        self.buttonBox.setOrientation(QtCore.Qt.Horizontal)
+        self.buttonBox.setStandardButtons(QDialogButtonBox.Cancel|QDialogButtonBox.Ok)
+        self.buttonBox.setObjectName("buttonBox")
+
+        self.cSlider = QSlider(Dialog)
+        self.cSlider.setGeometry(QtCore.QRect(50, 20, 160, 22))
+        self.cSlider.setOrientation(QtCore.Qt.Horizontal)
+
+        self.mSlider = QSlider(Dialog)
+        self.mSlider.setGeometry(QtCore.QRect(50, 60, 160, 22))
+        self.mSlider.setOrientation(QtCore.Qt.Horizontal)
+
+        self.ySlider = QSlider(Dialog)
+        self.ySlider.setGeometry(QtCore.QRect(50, 100, 160, 22))
+        self.ySlider.setOrientation(QtCore.Qt.Horizontal)
+
+        self.kSlider = QSlider(Dialog)
+        self.kSlider.setGeometry(QtCore.QRect(50, 140, 160, 22))
+        self.kSlider.setOrientation(QtCore.Qt.Horizontal)
+
+        self.c_label = QLabel("C", Dialog)
+        self.c_label.setGeometry(QtCore.QRect(10, 10, 21, 31))
+        self.c_label.setFont(font)
+
+        self.m_label = QLabel("M", Dialog)
+        self.m_label.setGeometry(QtCore.QRect(10, 50, 21, 31))
+        self.m_label.setFont(font)
+
+        self.y_label = QLabel("Y", Dialog)
+        self.y_label.setGeometry(QtCore.QRect(10, 90, 21, 31))
+        self.y_label.setFont(font)
+
+        self.k_label = QLabel("K", Dialog)
+        self.k_label.setGeometry(QtCore.QRect(10, 130, 21, 31))
+        self.k_label.setFont(font)
+
+        self.r_label = QLabel("R", Dialog)
+        self.r_label.setGeometry(QtCore.QRect(260, 10, 21, 31))
+        self.r_label.setFont(font)
+
+        self.g_label = QLabel("G", Dialog)
+        self.g_label.setGeometry(QtCore.QRect(260, 50, 21, 31))
+        self.g_label.setFont(font)
+
+        self.b_label = QLabel("B", Dialog)
+        self.b_label.setGeometry(QtCore.QRect(260, 90, 21, 31))
+        self.b_label.setFont(font)
+
+        self.rSlider = QSlider(Dialog)
+        self.rSlider.setGeometry(QtCore.QRect(300, 20, 160, 22))
+        self.rSlider.setOrientation(QtCore.Qt.Horizontal)
+
+        self.gSlider = QSlider(Dialog)
+        self.gSlider.setGeometry(QtCore.QRect(300, 60, 160, 22))
+        self.gSlider.setOrientation(QtCore.Qt.Horizontal)
+
+        self.bSlider = QSlider(Dialog)
+        self.bSlider.setGeometry(QtCore.QRect(300, 100, 160, 22))
+        self.bSlider.setOrientation(QtCore.Qt.Horizontal)
+
+        self.color_value_label = QLabel(Dialog)
+        self.color_value_label.setGeometry(QtCore.QRect(10, 210, 451, 20))
+
+        self.color_label = QLabel("Color:", Dialog)
+        self.color_label.setGeometry(QtCore.QRect(10, 180, 50, 13))
+        font.setPointSize(10)
+        self.color_label.setFont(font)
+
+        self.buttonBox.accepted.connect(Dialog.accept)
+        self.buttonBox.rejected.connect(Dialog.reject)
+        QtCore.QMetaObject.connectSlotsByName(Dialog)
 
 
 app = QApplication(sys.argv)
