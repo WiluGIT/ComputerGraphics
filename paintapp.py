@@ -8,7 +8,7 @@ import cv2
 from PySide2.QtWidgets import QApplication, QMainWindow, QGraphicsScene, QPushButton, \
     QGraphicsView, QGraphicsItem, QLabel, QGraphicsLineItem, QGraphicsRectItem, QGraphicsEllipseItem, QGraphicsObject, \
     QButtonGroup, QLineEdit, QLayout, QMessageBox, QComboBox, QStyle, QMenuBar, QMenu, QAction, QStatusBar, QFileDialog, \
-    QGraphicsPixmapItem, QDialogButtonBox, QSlider, QDialog
+    QGraphicsPixmapItem, QDialogButtonBox, QSlider, QDialog, QSpinBox
 from PySide2.QtGui import QBrush, QPen, QFont, QPainter, QColor, QRegExpValidator, QIcon, QPixmap, QImage
 from PySide2.QtCore import Qt, QRect, QPoint, Signal, QPointF, QRectF, Slot, QLineF, QSize
 from PySide2 import QtCore
@@ -897,7 +897,7 @@ class Ui_Dialog(QDialog):
 
 class Color_Dialog(object):
     def setupUi(self, Dialog):
-        Dialog.resize(491, 287)
+        Dialog.resize(537, 287)
         font = QFont()
         font.setPointSize(15)
         font.setBold(True)
@@ -912,18 +912,26 @@ class Color_Dialog(object):
         self.cSlider = QSlider(Dialog)
         self.cSlider.setGeometry(QtCore.QRect(50, 20, 160, 22))
         self.cSlider.setOrientation(QtCore.Qt.Horizontal)
+        self.cSlider.setMaximum(255)
+        self.cSlider.valueChanged.connect(self.cSliderValueChange)
 
         self.mSlider = QSlider(Dialog)
         self.mSlider.setGeometry(QtCore.QRect(50, 60, 160, 22))
         self.mSlider.setOrientation(QtCore.Qt.Horizontal)
+        self.mSlider.setMaximum(255)
+        self.mSlider.valueChanged.connect(self.mSliderValueChange)
 
         self.ySlider = QSlider(Dialog)
         self.ySlider.setGeometry(QtCore.QRect(50, 100, 160, 22))
         self.ySlider.setOrientation(QtCore.Qt.Horizontal)
+        self.ySlider.setMaximum(255)
+        self.ySlider.valueChanged.connect(self.ySliderValueChange)
 
         self.kSlider = QSlider(Dialog)
         self.kSlider.setGeometry(QtCore.QRect(50, 140, 160, 22))
         self.kSlider.setOrientation(QtCore.Qt.Horizontal)
+        self.kSlider.setMaximum(255)
+        self.kSlider.valueChanged.connect(self.kSliderValueChange)
 
         self.c_label = QLabel("C", Dialog)
         self.c_label.setGeometry(QtCore.QRect(10, 10, 21, 31))
@@ -942,28 +950,34 @@ class Color_Dialog(object):
         self.k_label.setFont(font)
 
         self.r_label = QLabel("R", Dialog)
-        self.r_label.setGeometry(QtCore.QRect(260, 10, 21, 31))
+        self.r_label.setGeometry(QtCore.QRect(270, 10, 21, 31))
         self.r_label.setFont(font)
 
         self.g_label = QLabel("G", Dialog)
-        self.g_label.setGeometry(QtCore.QRect(260, 50, 21, 31))
+        self.g_label.setGeometry(QtCore.QRect(270, 50, 21, 31))
         self.g_label.setFont(font)
 
         self.b_label = QLabel("B", Dialog)
-        self.b_label.setGeometry(QtCore.QRect(260, 90, 21, 31))
+        self.b_label.setGeometry(QtCore.QRect(270, 90, 21, 31))
         self.b_label.setFont(font)
 
         self.rSlider = QSlider(Dialog)
         self.rSlider.setGeometry(QtCore.QRect(300, 20, 160, 22))
         self.rSlider.setOrientation(QtCore.Qt.Horizontal)
+        self.rSlider.setMaximum(255)
+        self.rSlider.valueChanged.connect(self.rSliderValueChange)
 
         self.gSlider = QSlider(Dialog)
         self.gSlider.setGeometry(QtCore.QRect(300, 60, 160, 22))
         self.gSlider.setOrientation(QtCore.Qt.Horizontal)
+        self.gSlider.setMaximum(255)
+        self.gSlider.valueChanged.connect(self.gSliderValueChange)
 
         self.bSlider = QSlider(Dialog)
         self.bSlider.setGeometry(QtCore.QRect(300, 100, 160, 22))
         self.bSlider.setOrientation(QtCore.Qt.Horizontal)
+        self.bSlider.setMaximum(255)
+        self.bSlider.valueChanged.connect(self.bSliderValueChange)
 
         self.color_value_label = QLabel(Dialog)
         self.color_value_label.setGeometry(QtCore.QRect(10, 210, 451, 20))
@@ -973,9 +987,60 @@ class Color_Dialog(object):
         font.setPointSize(10)
         self.color_label.setFont(font)
 
+        self.cSpin = QSpinBox(Dialog)
+        self.cSpin.setGeometry(QtCore.QRect(220, 20, 42, 22))
+        self.cSpin.setMaximum(255)
+
+        self.mSpin = QSpinBox(Dialog)
+        self.mSpin.setGeometry(QtCore.QRect(220, 60, 42, 22))
+        self.mSpin.setMaximum(255)
+
+        self.ySpin = QSpinBox(Dialog)
+        self.ySpin.setGeometry(QtCore.QRect(220, 100, 42, 22))
+        self.ySpin.setMaximum(255)
+
+        self.kSpin = QSpinBox(Dialog)
+        self.kSpin.setGeometry(QtCore.QRect(220, 140, 42, 22))
+        self.kSpin.setMaximum(255)
+
+
+        self.rSpin = QSpinBox(Dialog)
+        self.rSpin.setGeometry(QtCore.QRect(480, 20, 42, 22))
+        self.rSpin.setMaximum(255)
+
+        self.gSpin = QSpinBox(Dialog)
+        self.gSpin.setGeometry(QtCore.QRect(480, 60, 42, 22))
+        self.gSpin.setMaximum(255)
+
+        self.bSpin = QSpinBox(Dialog)
+        self.bSpin.setGeometry(QtCore.QRect(480, 100, 42, 22))
+        self.bSpin.setMaximum(255)
+
         self.buttonBox.accepted.connect(Dialog.accept)
         self.buttonBox.rejected.connect(Dialog.reject)
         QtCore.QMetaObject.connectSlotsByName(Dialog)
+
+    def cSliderValueChange(self):
+        value = self.cSlider.value()
+        self.cSpin.setValue(value)
+    def mSliderValueChange(self):
+        value = self.mSlider.value()
+        self.mSpin.setValue(value)
+    def ySliderValueChange(self):
+        value = self.ySlider.value()
+        self.ySpin.setValue(value)
+    def kSliderValueChange(self):
+        value = self.kSlider.value()
+        self.kSpin.setValue(value)
+    def rSliderValueChange(self):
+        value = self.rSlider.value()
+        self.rSpin.setValue(value)
+    def gSliderValueChange(self):
+        value = self.gSlider.value()
+        self.gSpin.setValue(value)
+    def bSliderValueChange(self):
+        value = self.bSlider.value()
+        self.bSpin.setValue(value)
 
 
 app = QApplication(sys.argv)
