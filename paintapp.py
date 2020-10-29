@@ -115,6 +115,10 @@ class Window(QMainWindow):
         self.update_shape_button.clicked.connect(self.updateShape)
         self.resizer_text_section.append(self.update_shape_button)
 
+        self.set_color_button = QPushButton("Select color", self)
+        self.set_color_button.setGeometry(QtCore.QRect(70, 180, 80, 20))
+        self.set_color_button.clicked.connect(self.select_color_window)
+
         # labels
         self.photo = QLabel(self)
         self.photo.setGeometry(200, 50, self.graphic_view_width, self.graphic_view_height)
@@ -180,6 +184,11 @@ class Window(QMainWindow):
         self.path_label = QLabel(self)
         self.path_label.setGeometry(200, 500, 780, 16)
 
+        self.colorLabel = QLabel(self)
+        self.colorLabel.setGeometry(QtCore.QRect(20, 180, 40, 40))
+        self.colorLabel.setStyleSheet("QLabel { background-color: black}")
+
+
         #line edit
         self.point_start_x1_edit = QLineEdit(self)
         self.point_start_x1_edit.setGeometry(QRect(1080, 130, 30, 30))
@@ -236,14 +245,16 @@ class Window(QMainWindow):
         self.setTextCreatorSectionVisibility(False)
         self.setResizerVisabilitySection(False)
 
+    def select_color_window(self):
+        print("siema")
+
     def openFile(self):
         filter = "AllFiles (*.jpg *jpeg *.png *.bmp *.tiff *tif *ppm);;JPEG (*.jpg *jpeg);;PNG(*.png);;BMP (*.bmp);; TIF (*.tiff *.tif);; PPM (*ppm)"
         file = QFileDialog.getOpenFileName(filter=filter)
         filepath = file[0]
 
         if filepath.endswith(".ppm"):
-            #self.openPpmFile(filepath)
-            self.openPpmFileBackup(filepath)
+            self.openPpmFile(filepath)
         else:
             self.setPhotoFromPath(filepath)
 
@@ -281,96 +292,6 @@ class Window(QMainWindow):
         return self.window.exec_()
 
     def openPpmFile(self, filepath):
-        try:
-            data = []
-            ppm_params_dict = {}
-            with open(filepath, errors="ignore") as f:
-                file_pos = 0
-                for line in f:
-                    file_pos += len(line)
-                    line = line.partition('#')[0]
-                    line = line.rstrip().split()
-                    if line == "":
-                        continue
-                    data += line
-                    if len(data) == 4:
-                        break
-
-                ppm_params_dict["ppm_format"] = data[0]
-                ppm_params_dict["ppm_width"] = int(data[1])
-                ppm_params_dict["ppm_height"] = int(data[2])
-                ppm_params_dict["ppm_max"] = int(data[3])
-
-                if ppm_params_dict["ppm_format"] == 'P3':
-                    data = []
-                    for line in f:
-                        line = line.partition('#')[0]
-                        line = line.rstrip().split()
-                        data += line
-                elif ppm_params_dict["ppm_format"] == 'P6':
-                    f.close()
-                    data = []
-                    with open(filepath, "rb") as f:
-                        f.seek(file_pos)
-                        while True:
-                            byte = f.read(1)
-                            if not byte:
-                                break
-                            data.append(ord(byte))
-                else:
-                    raise Exception("File must have P3/P6 PPM format")
-
-                proper_values_count = ppm_params_dict["ppm_width"] * ppm_params_dict["ppm_height"] * 3
-                if len(data) != proper_values_count:
-                    raise Exception("File has wrong count of pixel values")
-
-                if any(int(i) > ppm_params_dict["ppm_max"] for i in data):
-                    raise Exception("Pixel values in files are bigger than max pixel value")
-
-            channel_type = np.uint16
-            max_value = 65535
-            if ppm_params_dict["ppm_max"] < 256:
-                channel_type = np.uint8
-                max_value = 255
-
-            result_array = np.zeros(shape=(ppm_params_dict["ppm_height"], ppm_params_dict["ppm_width"], 3))
-
-            row_index = 0
-            col_index = 0
-            if (ppm_params_dict["ppm_max"] < 255) or (65535 > ppm_params_dict["ppm_max"] > 255):
-                for j in range(0, len(data), 3):
-                    result_array[row_index, col_index, 0] = int(
-                        self.scaleBetween(int(data[j + 2]), 0, max_value, 0, ppm_params_dict["ppm_max"]))  # B
-                    result_array[row_index, col_index, 1] = int(
-                        self.scaleBetween(int(data[j + 1]), 0, max_value, 0, ppm_params_dict["ppm_max"]))  # G
-                    result_array[row_index, col_index, 2] = int(
-                        self.scaleBetween(int(data[j]), 0, max_value, 0, ppm_params_dict["ppm_max"]))  # R
-                    col_index += 1
-                    if col_index == ppm_params_dict["ppm_width"]:
-                        col_index = 0
-                        row_index += 1
-            else:
-                for j in range(0, len(data), 3):
-                    result_array[row_index, col_index, 0] = int(data[j + 2])  # B
-                    result_array[row_index, col_index, 1] = int(data[j + 1])  # G
-                    result_array[row_index, col_index, 2] = int(data[j])  # R
-                    col_index += 1
-                    if col_index == ppm_params_dict["ppm_width"]:
-                        col_index = 0
-                        row_index += 1
-
-            path = "out/ppm3_out.png"
-            cv2.imwrite(path, result_array.astype(channel_type))
-            self.setPhotoFromPath(path)
-        except Exception as error:
-            msg = QMessageBox()
-            msg.setIcon(QMessageBox.Warning)
-            msg.setText(str(error))
-            msg.setWindowTitle("Warning!")
-            msg.setStandardButtons(QMessageBox.Ok)
-            msg.exec_()
-
-    def openPpmFileBackup(self, filepath):
         try:
             data = []
             ppm_params_dict = {}
@@ -503,7 +424,6 @@ class Window(QMainWindow):
                 if pixel_count != proper_values_count:
                     raise Exception("File has wrong count of pixel values")
 
-            print(result_array)
             path = "out/ppm3_out.png"
             cv2.imwrite(path, result_array.astype(channel_type))
             self.setPhotoFromPath(path)
@@ -514,7 +434,7 @@ class Window(QMainWindow):
             msg.setWindowTitle("Warning!")
             msg.setStandardButtons(QMessageBox.Ok)
             msg.exec_()
-     
+
     def scaleBetween(self, unscaledNum, minAllowed, maxAllowed, min, max):
         return (maxAllowed - minAllowed) * (unscaledNum - min) / (max - min) + minAllowed
 
