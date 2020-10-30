@@ -257,6 +257,7 @@ class Window(QMainWindow):
                                                                                self.ui.bSpin.value()))
             self.graphics_view.graphic_Pen = QPen(QColor(self.ui.rSpin.value(), self.ui.gSpin.value(),
                                                                                self.ui.bSpin.value()))
+            self.size_combo_box()
 
 
     def openFile(self):
