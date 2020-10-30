@@ -914,25 +914,25 @@ class Color_Dialog(object):
         self.cSlider.setGeometry(QtCore.QRect(50, 20, 160, 22))
         self.cSlider.setOrientation(QtCore.Qt.Horizontal)
         self.cSlider.setMaximum(100)
-        self.cSlider.valueChanged.connect(self.cSliderValueChange)
+        self.cSlider.actionTriggered.connect(self.cSliderValueChange)
 
         self.mSlider = QSlider(Dialog)
         self.mSlider.setGeometry(QtCore.QRect(50, 60, 160, 22))
         self.mSlider.setOrientation(QtCore.Qt.Horizontal)
         self.mSlider.setMaximum(100)
-        self.mSlider.valueChanged.connect(self.mSliderValueChange)
+        self.mSlider.actionTriggered.connect(self.mSliderValueChange)
 
         self.ySlider = QSlider(Dialog)
         self.ySlider.setGeometry(QtCore.QRect(50, 100, 160, 22))
         self.ySlider.setOrientation(QtCore.Qt.Horizontal)
         self.ySlider.setMaximum(100)
-        self.ySlider.valueChanged.connect(self.ySliderValueChange)
+        self.ySlider.actionTriggered.connect(self.ySliderValueChange)
 
         self.kSlider = QSlider(Dialog)
         self.kSlider.setGeometry(QtCore.QRect(50, 140, 160, 22))
         self.kSlider.setOrientation(QtCore.Qt.Horizontal)
         self.kSlider.setMaximum(100)
-        self.kSlider.valueChanged.connect(self.kSliderValueChange)
+        self.kSlider.actionTriggered.connect(self.kSliderValueChange)
 
         self.c_label = QLabel("C", Dialog)
         self.c_label.setGeometry(QtCore.QRect(10, 10, 21, 31))
@@ -966,19 +966,19 @@ class Color_Dialog(object):
         self.rSlider.setGeometry(QtCore.QRect(300, 20, 160, 22))
         self.rSlider.setOrientation(QtCore.Qt.Horizontal)
         self.rSlider.setMaximum(255)
-        self.rSlider.valueChanged.connect(self.rSliderValueChange)
+        self.rSlider.actionTriggered.connect(self.rSliderValueChange)
 
         self.gSlider = QSlider(Dialog)
         self.gSlider.setGeometry(QtCore.QRect(300, 60, 160, 22))
         self.gSlider.setOrientation(QtCore.Qt.Horizontal)
         self.gSlider.setMaximum(255)
-        self.gSlider.valueChanged.connect(self.gSliderValueChange)
+        self.gSlider.actionTriggered.connect(self.gSliderValueChange)
 
         self.bSlider = QSlider(Dialog)
         self.bSlider.setGeometry(QtCore.QRect(300, 100, 160, 22))
         self.bSlider.setOrientation(QtCore.Qt.Horizontal)
         self.bSlider.setMaximum(255)
-        self.bSlider.valueChanged.connect(self.bSliderValueChange)
+        self.bSlider.actionTriggered.connect(self.bSliderValueChange)
 
         self.color_value_label = QLabel(Dialog)
         self.color_value_label.setGeometry(QtCore.QRect(10, 210, 451, 20))
@@ -1030,65 +1030,73 @@ class Color_Dialog(object):
     def cSliderValueChange(self):
         value = self.cSlider.value()
         self.cSpin.setValue(value)
+        self.convertCMYKtoRGB()
 
     def mSliderValueChange(self):
         value = self.mSlider.value()
         self.mSpin.setValue(value)
+        self.convertCMYKtoRGB()
 
     def ySliderValueChange(self):
         value = self.ySlider.value()
         self.ySpin.setValue(value)
+        self.convertCMYKtoRGB()
 
     def kSliderValueChange(self):
         value = self.kSlider.value()
         self.kSpin.setValue(value)
+        self.convertCMYKtoRGB()
 
     def rSliderValueChange(self):
         value = self.rSlider.value()
         self.rSpin.setValue(value)
+        self.convertRGBtoCMYK()
 
     def gSliderValueChange(self):
         value = self.gSlider.value()
         self.gSpin.setValue(value)
+        self.convertRGBtoCMYK()
 
     def bSliderValueChange(self):
         value = self.bSlider.value()
         self.bSpin.setValue(value)
+        self.convertRGBtoCMYK()
 
     def cSpinValueChange(self):
         value = self.cSpin.value()
         self.cSlider.setValue(value)
-        self.convertCMYKtoRGB()
+        print("essa")
+        #self.convertCMYKtoRGB()
 
     def mSpinValueChange(self):
         value = self.mSpin.value()
         self.mSlider.setValue(value)
-        self.convertCMYKtoRGB()
+        #self.convertCMYKtoRGB()
 
     def ySpinValueChange(self):
         value = self.ySpin.value()
         self.ySlider.setValue(value)
-        self.convertCMYKtoRGB()
+        #self.convertCMYKtoRGB()
 
     def kSpinValueChange(self):
         value = self.kSpin.value()
         self.kSlider.setValue(value)
-        self.convertCMYKtoRGB()
+        #self.convertCMYKtoRGB()
 
     def rSpinValueChange(self):
         value = self.rSpin.value()
         self.rSlider.setValue(value)
-        self.convertRGBtoCMYK()
+        #self.convertRGBtoCMYK()
 
     def gSpinValueChange(self):
         value = self.gSpin.value()
         self.gSlider.setValue(value)
-        self.convertRGBtoCMYK()
+        #self.convertRGBtoCMYK()
 
     def bSpinValueChange(self):
         value = self.bSpin.value()
         self.bSlider.setValue(value)
-        self.convertRGBtoCMYK()
+        #self.convertRGBtoCMYK()
 
     def convertRGBtoCMYK(self):
         red = self.rSpin.value()/255
@@ -1105,17 +1113,18 @@ class Color_Dialog(object):
         self.kSpin.setValue(round(black * 100))
 
     def convertCMYKtoRGB(self):
-        cyan = self.cSpin.value()/255
-        magenta = self.mSpin.value()/255
-        yellow = self.ySpin.value()/255
-        black = self.kSpin.value()/255
+        cyan = self.cSpin.value()/100
+        magenta = self.mSpin.value()/100
+        yellow = self.ySpin.value()/100
+        black = self.kSpin.value()/100
+
         red = 1-min(1, cyan*(1-black)+black)
         green = 1-min(1, magenta*(1-black)+black)
         blue = 1-min(1, yellow*(1-black)+black)
 
-        self.rSpin.setValue(round(red * 100))
-        self.gSpin.setValue(round(green * 100))
-        self.bSpin.setValue(round(blue * 100))
+        self.rSpin.setValue(round(red * 255))
+        self.gSpin.setValue(round(green * 255))
+        self.bSpin.setValue(round(blue * 255))
 
 
 app = QApplication(sys.argv)
