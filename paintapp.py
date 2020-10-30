@@ -251,7 +251,13 @@ class Window(QMainWindow):
         self.ui = Color_Dialog()
         self.ui.setupUi(self.window)
         self.window.show()
-        print(self.window.exec_())
+
+        if self.window.exec_() == 1:
+            self.colorLabel.setStyleSheet("QLabel{{ background-color: rgb({},{},{});}}".format(self.ui.rSpin.value(), self.ui.gSpin.value(),
+                                                                               self.ui.bSpin.value()))
+            self.graphics_view.graphic_Pen = QPen(QColor(self.ui.rSpin.value(), self.ui.gSpin.value(),
+                                                                               self.ui.bSpin.value()))
+
 
     def openFile(self):
         filter = "AllFiles (*.jpg *jpeg *.png *.bmp *.tiff *tif *ppm);;JPEG (*.jpg *jpeg);;PNG(*.png);;BMP (*.bmp);; TIF (*.tiff *.tif);; PPM (*ppm)"
@@ -1037,7 +1043,7 @@ class Color_Dialog(object):
         self.bSpin = QSpinBox(Dialog)
         self.bSpin.setGeometry(QtCore.QRect(480, 100, 42, 22))
         self.bSpin.setMaximum(255)
-        self.bSpin.editingFinished.connect(self.bSpinValueChange)
+        self.bSpin.valueChanged.connect(self.bSpinValueChange)
         self.bSpin.editingFinished.connect(self.convertRGBtoCMYK)
 
         QtCore.QMetaObject.connectSlotsByName(Dialog)
@@ -1065,7 +1071,6 @@ class Color_Dialog(object):
         self.kSpin.setValue(value)
         self.convertCMYKtoRGB()
 
-        print("dxd")
     def rSliderValueChange(self):
         value = self.rSlider.value()
         self.rSpin.setValue(value)
@@ -1097,7 +1102,6 @@ class Color_Dialog(object):
         value = self.kSpin.value()
         self.kSlider.setValue(value)
 
-
     def rSpinValueChange(self):
         value = self.rSpin.value()
         self.rSlider.setValue(value)
@@ -1124,6 +1128,10 @@ class Color_Dialog(object):
             self.mSpin.setValue(round(magenta * 100))
             self.ySpin.setValue(round(yellow * 100))
             self.kSpin.setValue(round(black * 100))
+            color_label = "QLabel{{ background-color: rgb({},{},{});}}".format(self.rSpin.value(), self.gSpin.value(),
+                                                                           self.bSpin.value())
+            self.color_value_label.setStyleSheet(color_label)
+
         except ZeroDivisionError:
             pass
 
@@ -1141,6 +1149,8 @@ class Color_Dialog(object):
             self.rSpin.setValue(round(red * 255))
             self.gSpin.setValue(round(green * 255))
             self.bSpin.setValue(round(blue * 255))
+            color_label ="QLabel{{ background-color: rgb({},{},{});}}".format(self.rSpin.value(), self.gSpin.value(), self.bSpin.value())
+            self.color_value_label.setStyleSheet(color_label)
         except ZeroDivisionError:
             pass
 
