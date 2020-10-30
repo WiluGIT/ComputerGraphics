@@ -9,7 +9,7 @@ import cv2
 from PySide2.QtWidgets import QApplication, QMainWindow, QGraphicsScene, QPushButton, \
     QGraphicsView, QGraphicsItem, QLabel, QGraphicsLineItem, QGraphicsRectItem, QGraphicsEllipseItem, QGraphicsObject, \
     QButtonGroup, QLineEdit, QLayout, QMessageBox, QComboBox, QStyle, QMenuBar, QMenu, QAction, QStatusBar, QFileDialog, \
-    QGraphicsPixmapItem, QDialogButtonBox, QSlider, QDialog, QSpinBox
+    QGraphicsPixmapItem, QDialogButtonBox, QSlider, QDialog, QSpinBox, QAbstractSlider
 from PySide2.QtGui import QBrush, QPen, QFont, QPainter, QColor, QRegExpValidator, QIcon, QPixmap, QImage
 from PySide2.QtCore import Qt, QRect, QPoint, Signal, QPointF, QRectF, Slot, QLineF, QSize
 from PySide2 import QtCore
@@ -251,7 +251,7 @@ class Window(QMainWindow):
         self.ui = Color_Dialog()
         self.ui.setupUi(self.window)
         self.window.show()
-        return self.window.exec_()
+        print(self.window.exec_())
 
     def openFile(self):
         filter = "AllFiles (*.jpg *jpeg *.png *.bmp *.tiff *tif *ppm);;JPEG (*.jpg *jpeg);;PNG(*.png);;BMP (*.bmp);; TIF (*.tiff *.tif);; PPM (*ppm)"
@@ -904,11 +904,21 @@ class Color_Dialog(object):
         font.setBold(True)
         font.setWeight(75)
 
-        self.buttonBox = QDialogButtonBox(Dialog)
-        self.buttonBox.setGeometry(QtCore.QRect(280, 240, 171, 32))
-        self.buttonBox.setOrientation(QtCore.Qt.Horizontal)
-        self.buttonBox.setStandardButtons(QDialogButtonBox.Cancel|QDialogButtonBox.Ok)
-        self.buttonBox.setObjectName("buttonBox")
+        self.ok = QPushButton("OK", Dialog)
+        self.ok.setAutoDefault(False)
+        self.cancel = QPushButton("Cancel", Dialog)
+        self.cancel.setAutoDefault(False)
+        self.ok.setGeometry(400, 240, 50, 30)
+        self.cancel.setGeometry(460, 240, 50, 30)
+        self.ok.clicked.connect(Dialog.accept)
+        self.cancel.clicked.connect(Dialog.reject)
+        # self.buttonBox.accepted.connect(Dialog.accept)
+        # self.buttonBox.rejected.connect(Dialog.reject)
+        # self.buttonBox = QDialogButtonBox(Dialog)
+        # self.buttonBox.setGeometry(QtCore.QRect(280, 240, 171, 32))
+        # self.buttonBox.setOrientation(QtCore.Qt.Horizontal)
+        # self.buttonBox.setStandardButtons(cancel|ok)
+        # self.buttonBox.setObjectName("buttonBox")
 
         self.cSlider = QSlider(Dialog)
         self.cSlider.setGeometry(QtCore.QRect(50, 20, 160, 22))
@@ -992,45 +1002,53 @@ class Color_Dialog(object):
         self.cSpin.setGeometry(QtCore.QRect(220, 20, 42, 22))
         self.cSpin.setMaximum(100)
         self.cSpin.valueChanged.connect(self.cSpinValueChange)
+        self.cSpin.editingFinished.connect(self.convertCMYKtoRGB)
 
         self.mSpin = QSpinBox(Dialog)
         self.mSpin.setGeometry(QtCore.QRect(220, 60, 42, 22))
         self.mSpin.setMaximum(100)
         self.mSpin.valueChanged.connect(self.mSpinValueChange)
+        self.mSpin.editingFinished.connect(self.convertCMYKtoRGB)
 
         self.ySpin = QSpinBox(Dialog)
         self.ySpin.setGeometry(QtCore.QRect(220, 100, 42, 22))
         self.ySpin.setMaximum(100)
         self.ySpin.valueChanged.connect(self.ySpinValueChange)
+        self.ySpin.editingFinished.connect(self.convertCMYKtoRGB)
 
         self.kSpin = QSpinBox(Dialog)
         self.kSpin.setGeometry(QtCore.QRect(220, 140, 42, 22))
         self.kSpin.setMaximum(100)
         self.kSpin.valueChanged.connect(self.kSpinValueChange)
+        self.kSpin.editingFinished.connect(self.convertCMYKtoRGB)
 
         self.rSpin = QSpinBox(Dialog)
         self.rSpin.setGeometry(QtCore.QRect(480, 20, 42, 22))
         self.rSpin.setMaximum(255)
         self.rSpin.valueChanged.connect(self.rSpinValueChange)
+        self.rSpin.editingFinished.connect(self.convertRGBtoCMYK)
 
         self.gSpin = QSpinBox(Dialog)
         self.gSpin.setGeometry(QtCore.QRect(480, 60, 42, 22))
         self.gSpin.setMaximum(255)
         self.gSpin.valueChanged.connect(self.gSpinValueChange)
+        self.gSpin.editingFinished.connect(self.convertRGBtoCMYK)
 
         self.bSpin = QSpinBox(Dialog)
         self.bSpin.setGeometry(QtCore.QRect(480, 100, 42, 22))
         self.bSpin.setMaximum(255)
-        self.bSpin.valueChanged.connect(self.bSpinValueChange)
+        self.bSpin.editingFinished.connect(self.bSpinValueChange)
+        self.bSpin.editingFinished.connect(self.convertRGBtoCMYK)
 
-        self.buttonBox.accepted.connect(Dialog.accept)
-        self.buttonBox.rejected.connect(Dialog.reject)
         QtCore.QMetaObject.connectSlotsByName(Dialog)
+        self.convertCMYKtoRGB()
+
 
     def cSliderValueChange(self):
         value = self.cSlider.value()
         self.cSpin.setValue(value)
         self.convertCMYKtoRGB()
+
 
     def mSliderValueChange(self):
         value = self.mSlider.value()
@@ -1047,6 +1065,7 @@ class Color_Dialog(object):
         self.kSpin.setValue(value)
         self.convertCMYKtoRGB()
 
+        print("dxd")
     def rSliderValueChange(self):
         value = self.rSlider.value()
         self.rSpin.setValue(value)
@@ -1065,66 +1084,65 @@ class Color_Dialog(object):
     def cSpinValueChange(self):
         value = self.cSpin.value()
         self.cSlider.setValue(value)
-        print("essa")
-        #self.convertCMYKtoRGB()
 
     def mSpinValueChange(self):
         value = self.mSpin.value()
         self.mSlider.setValue(value)
-        #self.convertCMYKtoRGB()
 
     def ySpinValueChange(self):
         value = self.ySpin.value()
         self.ySlider.setValue(value)
-        #self.convertCMYKtoRGB()
 
     def kSpinValueChange(self):
         value = self.kSpin.value()
         self.kSlider.setValue(value)
-        #self.convertCMYKtoRGB()
+
 
     def rSpinValueChange(self):
         value = self.rSpin.value()
         self.rSlider.setValue(value)
-        #self.convertRGBtoCMYK()
 
     def gSpinValueChange(self):
         value = self.gSpin.value()
         self.gSlider.setValue(value)
-        #self.convertRGBtoCMYK()
 
     def bSpinValueChange(self):
         value = self.bSpin.value()
         self.bSlider.setValue(value)
-        #self.convertRGBtoCMYK()
 
     def convertRGBtoCMYK(self):
-        red = self.rSpin.value()/255
-        green = self.gSpin.value()/255
-        blue = self.bSpin.value()/255
-        black = min(1-red, 1-green, 1-blue)
-        cyan = (1-red-black)/(1-black)
-        magenta = (1-green-black)/(1-black)
-        yellow = (1-blue-black)/(1-black)
+        try:
+            red = self.rSpin.value() / 255
+            green = self.gSpin.value() / 255
+            blue = self.bSpin.value() / 255
+            black = min(1 - red, 1 - green, 1 - blue)
+            cyan = (1 - red - black) / (1 - black)
+            magenta = (1 - green - black) / (1 - black)
+            yellow = (1 - blue - black) / (1 - black)
 
-        self.cSpin.setValue(round(cyan * 100))
-        self.mSpin.setValue(round(magenta * 100))
-        self.ySpin.setValue(round(yellow * 100))
-        self.kSpin.setValue(round(black * 100))
+            self.cSpin.setValue(round(cyan * 100))
+            self.mSpin.setValue(round(magenta * 100))
+            self.ySpin.setValue(round(yellow * 100))
+            self.kSpin.setValue(round(black * 100))
+        except ZeroDivisionError:
+            pass
 
     def convertCMYKtoRGB(self):
-        cyan = self.cSpin.value()/100
-        magenta = self.mSpin.value()/100
-        yellow = self.ySpin.value()/100
-        black = self.kSpin.value()/100
+        try:
+            cyan = self.cSpin.value() / 100
+            magenta = self.mSpin.value() / 100
+            yellow = self.ySpin.value() / 100
+            black = self.kSpin.value() / 100
 
-        red = 1-min(1, cyan*(1-black)+black)
-        green = 1-min(1, magenta*(1-black)+black)
-        blue = 1-min(1, yellow*(1-black)+black)
+            red = 1 - min(1, cyan * (1 - black) + black)
+            green = 1 - min(1, magenta * (1 - black) + black)
+            blue = 1 - min(1, yellow * (1 - black) + black)
 
-        self.rSpin.setValue(round(red * 255))
-        self.gSpin.setValue(round(green * 255))
-        self.bSpin.setValue(round(blue * 255))
+            self.rSpin.setValue(round(red * 255))
+            self.gSpin.setValue(round(green * 255))
+            self.bSpin.setValue(round(blue * 255))
+        except ZeroDivisionError:
+            pass
 
 
 app = QApplication(sys.argv)
