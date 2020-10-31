@@ -1181,10 +1181,11 @@ class Color_Dialog(object):
         except ZeroDivisionError:
             pass
 
+
 class CubeWindow(QWidget):
     def __init__(self):
         super(CubeWindow, self).__init__()
-        self.resize(400, 600)
+        self.resize(500, 500)
         self.glWidget = GLWidget()
         self.guiLayout = QVBoxLayout()
 
@@ -1215,14 +1216,16 @@ class GLWidget(QGLWidget):
         QtOpenGL.QGLWidget.__init__(self, parent)
 
     def initializeGL(self):
-        self.qglClearColor(QColor(0, 0, 255))  # initialize the screen to blue
-        gl.glEnable(gl.GL_DEPTH_TEST)  # enable depth testing
+        self.qglClearColor(QColor(0, 0, 0))
+        gl.glEnable(gl.GL_DEPTH_TEST)
 
         self.initGeometry()
 
         self.rotX = 0.0
         self.rotY = 0.0
         self.rotZ = 0.0
+
+        self.lastPos = QPoint()
 
     def resizeGL(self, width, height):
         gl.glViewport(0, 0, width, height)
@@ -1294,6 +1297,7 @@ class GLWidget(QGLWidget):
              7, 6, 5, 4])
 
     def setRotX(self, val):
+        print(val)
         self.rotX = np.pi * val
 
 
@@ -1303,6 +1307,45 @@ class GLWidget(QGLWidget):
     def setRotZ(self, val):
         self.rotZ = np.pi * val
 
+    def mousePressEvent(self, event):
+        self.lastPos = event.pos()
+
+    def mouseMoveEvent(self, event):
+        dx = event.x() - self.lastPos.x()
+        dy = event.y() - self.lastPos.y()
+
+        if event.buttons() & Qt.LeftButton:
+            self.setXRotation(self.rotX + 8 * dy)
+            self.setYRotation(self.rotY + 8 * dx)
+        elif event.buttons() & Qt.RightButton:
+            self.setXRotation(self.rotX + 8 * dy)
+            self.setZRotation(self.rotZ + 8 * dx)
+
+        self.lastPos = event.pos()
+
+    def setXRotation(self, angle):
+        print(angle)
+        angle = self.normalizeAngle(angle)
+        print(angle)
+        if angle != self.rotX:
+            self.rotX = angle
+
+    def setYRotation(self, angle):
+        angle = self.normalizeAngle(angle)
+        if angle != self.rotY:
+            self.rotY = angle
+
+    def setZRotation(self, angle):
+        angle = self.normalizeAngle(angle)
+        if angle != self.rotZ:
+            self.rotZ = angle
+
+    def normalizeAngle(self, angle):
+        while angle < 0:
+            angle += 360
+        while angle > 360:
+            angle -= 360
+        return angle
 
 app = QApplication(sys.argv)
 window = Window()
