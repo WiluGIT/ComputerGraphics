@@ -257,6 +257,13 @@ class Window(QMainWindow):
         self.window = CubeWindow()
         self.window.show()
 
+        if self.window.exec_() == 1:
+            self.colorLabel.setStyleSheet(
+                "QLabel{{ background-color: rgb({},{},{});}}".format(self.window.color_rgb.red(), self.window.color_rgb.green(),
+                                                                     self.window.color_rgb.blue()))
+            self.graphics_view.graphic_Pen = QPen(QColor(self.window.color_rgb))
+            self.size_combo_box()
+
     def select_color_window(self):
         self.window = QDialog()
         self.ui = Color_Dialog()
@@ -1159,33 +1166,30 @@ class Color_Dialog(object):
             pass
 
 
-class CubeWindow(QWidget):
+class CubeWindow(QDialog):
     def __init__(self):
         super(CubeWindow, self).__init__()
         self.resize(500, 500)
+
         self.glWidget = GLWidget()
+
         self.guiLayout = QVBoxLayout()
-
         self.guiLayout.addWidget(self.glWidget)
-
-        # sliderX = QSlider(QtCore.Qt.Horizontal)
-        # sliderX.valueChanged.connect(lambda val: self.glWidget.setRotX(val))
-        #
-        # sliderY = QSlider(QtCore.Qt.Horizontal)
-        # sliderY.valueChanged.connect(lambda val: self.glWidget.setRotY(val))
-        #
-        # sliderZ = QSlider(QtCore.Qt.Horizontal)
-        # sliderZ.valueChanged.connect(lambda val: self.glWidget.setRotZ(val))
-        #
-        # self.guiLayout.addWidget(sliderX)
-        # self.guiLayout.addWidget(sliderY)
-        # self.guiLayout.addWidget(sliderZ)
 
         self.colorLabel = QLabel(self)
         self.colorLabel.resize(100, 100)
         self.colorLabel.setStyleSheet("QLabel { background-color: black}")
+
+        self.ok = QPushButton("OK")
+        self.ok.setAutoDefault(False)
+        self.ok.clicked.connect(self.confirmWindow)
+
         self.guiLayout.addWidget(self.colorLabel)
+        self.guiLayout.addWidget(self.ok)
         self.setLayout(self.guiLayout)
+
+        self.color_rgb = QColor()
+
         timer = QtCore.QTimer(self)
         timer.setInterval(20)   # period, in milliseconds
         timer.timeout.connect(self.glWidget.updateGL)
@@ -1193,11 +1197,18 @@ class CubeWindow(QWidget):
 
         self.glWidget.colorSignal.connect(self.colorChange)
 
+    def setupDialog(self, Dialog):
+        self.ok.clicked.connect(Dialog.accept)
+
     @QtCore.Slot(QGLWidget)
     def colorChange(self, color):
         color_label = "QLabel{{ background-color: rgb({},{},{});}}".format(color.red(), color.green(),
                                                                            color.blue())
         self.colorLabel.setStyleSheet(color_label)
+        self.color_rgb = QColor(color.red(), color.green(), color.blue())
+
+    def confirmWindow(self):
+        self.accept()
 
 
 class GLWidget(QGLWidget):
@@ -1287,15 +1298,6 @@ class GLWidget(QGLWidget):
              0, 3, 7, 4,
              7, 6, 5, 4])
 
-    def setRotX(self, val):
-        self.rotX = np.pi * val
-
-    def setRotY(self, val):
-        self.rotY = np.pi * val
-
-    def setRotZ(self, val):
-        self.rotZ = np.pi * val
-
     def mousePressEvent(self, event):
         self.lastPos = event.pos()
         yFromBottom = 235
@@ -1311,10 +1313,10 @@ class GLWidget(QGLWidget):
         dx = event.x() - self.lastPos.x()
         dy = event.y() - self.lastPos.y()
 
-        # if event.buttons() & Qt.LeftButton:
-        #     self.setXRotation(self.rotX + dy)
-        #     self.setYRotation(self.rotY + dx)
-        if event.buttons() & Qt.RightButton:
+        if event.buttons() & Qt.LeftButton:
+            self.setXRotation(self.rotX + dy)
+            self.setYRotation(self.rotY + dx)
+        elif event.buttons() & Qt.RightButton:
             self.setXRotation(self.rotX + dy)
             self.setZRotation(self.rotZ + dx)
 
