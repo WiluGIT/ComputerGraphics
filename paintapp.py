@@ -256,28 +256,6 @@ class Window(QMainWindow):
     def show_cube(self):
         self.window = CubeWindow()
         self.window.show()
-        # self.window = QGLWidget()
-        # self.glWidget = GLWidget(self.window)
-        #
-        # self.central_widget = QWidget()
-        # self.guiLayout = QVBoxLayout()
-        # self.central_widget.setLayout(self.guiLayout)
-        # self.guiLayout.addWidget(self.glWidget)
-        #
-        # sliderX = QSlider(QtCore.Qt.Horizontal)
-        # sliderX.valueChanged.connect(lambda val: self.glWidget.setRotX(val))
-        #
-        # sliderY = QSlider(QtCore.Qt.Horizontal)
-        # sliderY.valueChanged.connect(lambda val: self.glWidget.setRotY(val))
-        #
-        # sliderZ = QSlider(QtCore.Qt.Horizontal)
-        # sliderZ.valueChanged.connect(lambda val: self.glWidget.setRotZ(val))
-        #
-        # self.gui_layout.addWidget(sliderX)
-        # self.gui_layout.addWidget(sliderY)
-        # self.gui_layout.addWidget(sliderZ)
-
-        #self.window.show()
 
     def select_color_window(self):
         self.window = QDialog()
@@ -291,7 +269,6 @@ class Window(QMainWindow):
             self.graphics_view.graphic_Pen = QPen(QColor(self.ui.rSpin.value(), self.ui.gSpin.value(),
                                                                                self.ui.bSpin.value()))
             self.size_combo_box()
-
 
     def openFile(self):
         filter = "AllFiles (*.jpg *jpeg *.png *.bmp *.tiff *tif *ppm);;JPEG (*.jpg *jpeg);;PNG(*.png);;BMP (*.bmp);; TIF (*.tiff *.tif);; PPM (*ppm)"
@@ -1191,26 +1168,40 @@ class CubeWindow(QWidget):
 
         self.guiLayout.addWidget(self.glWidget)
 
-        sliderX = QSlider(QtCore.Qt.Horizontal)
-        sliderX.valueChanged.connect(lambda val: self.glWidget.setRotX(val))
+        # sliderX = QSlider(QtCore.Qt.Horizontal)
+        # sliderX.valueChanged.connect(lambda val: self.glWidget.setRotX(val))
+        #
+        # sliderY = QSlider(QtCore.Qt.Horizontal)
+        # sliderY.valueChanged.connect(lambda val: self.glWidget.setRotY(val))
+        #
+        # sliderZ = QSlider(QtCore.Qt.Horizontal)
+        # sliderZ.valueChanged.connect(lambda val: self.glWidget.setRotZ(val))
+        #
+        # self.guiLayout.addWidget(sliderX)
+        # self.guiLayout.addWidget(sliderY)
+        # self.guiLayout.addWidget(sliderZ)
 
-        sliderY = QSlider(QtCore.Qt.Horizontal)
-        sliderY.valueChanged.connect(lambda val: self.glWidget.setRotY(val))
-
-        sliderZ = QSlider(QtCore.Qt.Horizontal)
-        sliderZ.valueChanged.connect(lambda val: self.glWidget.setRotZ(val))
-
-        self.guiLayout.addWidget(sliderX)
-        self.guiLayout.addWidget(sliderY)
-        self.guiLayout.addWidget(sliderZ)
+        self.colorLabel = QLabel(self)
+        self.colorLabel.resize(100, 100)
+        self.colorLabel.setStyleSheet("QLabel { background-color: black}")
+        self.guiLayout.addWidget(self.colorLabel)
         self.setLayout(self.guiLayout)
         timer = QtCore.QTimer(self)
         timer.setInterval(20)   # period, in milliseconds
         timer.timeout.connect(self.glWidget.updateGL)
         timer.start()
 
+        self.glWidget.colorSignal.connect(self.colorChange)
+
+    @QtCore.Slot(QGLWidget)
+    def colorChange(self, color):
+        color_label = "QLabel{{ background-color: rgb({},{},{});}}".format(color.red(), color.green(),
+                                                                           color.blue())
+        self.colorLabel.setStyleSheet(color_label)
+
 
 class GLWidget(QGLWidget):
+    colorSignal = QtCore.Signal(QColor)
     def __init__(self, parent=None):
         self.parent = parent
         QtOpenGL.QGLWidget.__init__(self, parent)
@@ -1297,9 +1288,7 @@ class GLWidget(QGLWidget):
              7, 6, 5, 4])
 
     def setRotX(self, val):
-        print(val)
         self.rotX = np.pi * val
-
 
     def setRotY(self, val):
         self.rotY = np.pi * val
@@ -1309,24 +1298,30 @@ class GLWidget(QGLWidget):
 
     def mousePressEvent(self, event):
         self.lastPos = event.pos()
+        yFromBottom = 235
+
+        c = gl.glReadPixels(self.lastPos.x(), self.height() - self.lastPos.y(), 1.0, 1.0, gl.GL_RGB, gl.GL_UNSIGNED_BYTE, None)
+        r = ord(c[:1])
+        g = ord(c[1:2])
+        b = ord(c[2:3])
+
+        self.colorSignal.emit(QColor(r, g, b))
 
     def mouseMoveEvent(self, event):
         dx = event.x() - self.lastPos.x()
         dy = event.y() - self.lastPos.y()
 
-        if event.buttons() & Qt.LeftButton:
-            self.setXRotation(self.rotX + 8 * dy)
-            self.setYRotation(self.rotY + 8 * dx)
-        elif event.buttons() & Qt.RightButton:
-            self.setXRotation(self.rotX + 8 * dy)
-            self.setZRotation(self.rotZ + 8 * dx)
+        # if event.buttons() & Qt.LeftButton:
+        #     self.setXRotation(self.rotX + dy)
+        #     self.setYRotation(self.rotY + dx)
+        if event.buttons() & Qt.RightButton:
+            self.setXRotation(self.rotX + dy)
+            self.setZRotation(self.rotZ + dx)
 
         self.lastPos = event.pos()
 
     def setXRotation(self, angle):
-        print(angle)
         angle = self.normalizeAngle(angle)
-        print(angle)
         if angle != self.rotX:
             self.rotX = angle
 
