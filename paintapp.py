@@ -127,6 +127,10 @@ class Window(QMainWindow):
         self.cube_button.setGeometry(QtCore.QRect(70, 200, 80, 20))
         self.cube_button.clicked.connect(self.show_cube)
 
+        self.point_button = QPushButton("Point transformation", self)
+        self.point_button.setGeometry(QtCore.QRect(20, 250, 120, 20))
+        self.point_button.clicked.connect(self.show_point_dialog)
+
         # labels
         self.photo = QLabel(self)
         self.photo.setGeometry(200, 50, self.graphic_view_width, self.graphic_view_height)
@@ -276,6 +280,12 @@ class Window(QMainWindow):
             self.graphics_view.graphic_Pen = QPen(QColor(self.ui.rSpin.value(), self.ui.gSpin.value(),
                                                                                self.ui.bSpin.value()))
             self.size_combo_box()
+
+    def show_point_dialog(self):
+        self.window = QDialog()
+        self.ui = PointDialog()
+        self.ui.setupUi(self.window, self)
+        self.window.show()
 
     def openFile(self):
         filter = "AllFiles (*.jpg *jpeg *.png *.bmp *.tiff *tif *ppm);;JPEG (*.jpg *jpeg);;PNG(*.png);;BMP (*.bmp);; TIF (*.tiff *.tif);; PPM (*ppm)"
@@ -1144,6 +1154,10 @@ class Color_Dialog(object):
             self.color_value_label.setStyleSheet(color_label)
 
         except ZeroDivisionError:
+            self.cSpin.setValue(0)
+            self.mSpin.setValue(0)
+            self.ySpin.setValue(0)
+            self.kSpin.setValue(100)
             pass
 
     def convertCMYKtoRGB(self):
@@ -1343,6 +1357,128 @@ class GLWidget(QGLWidget):
         while angle > 360:
             angle -= 360
         return angle
+
+class PointDialog(object):
+    def setupUi(self, Dialog, parent):
+        self.parent = parent
+        Dialog.setObjectName("Dialog")
+        Dialog.resize(378, 190)
+        self.buttonBox = QDialogButtonBox(Dialog)
+        self.buttonBox.setGeometry(QtCore.QRect(10, 140, 341, 32))
+        self.buttonBox.setOrientation(QtCore.Qt.Horizontal)
+        self.buttonBox.setStandardButtons(QDialogButtonBox.Cancel|QDialogButtonBox.Ok)
+        self.buttonBox.setObjectName("buttonBox")
+        self.greyscale_dropdown = QComboBox(Dialog)
+        self.greyscale_dropdown.setGeometry(QtCore.QRect(20, 40, 81, 22))
+        self.greyscale_dropdown.setObjectName("greyscale_dropdown")
+        self.greyscale_dropdown.addItem("")
+        self.greyscale_dropdown.addItem("")
+        self.greyscale_dropdown.addItem("")
+        self.greyscale_dropdown.addItem("")
+        self.greyscale_dropdown.addItem("")
+        self.greyscale_button = QPushButton(Dialog)
+        self.greyscale_button.setGeometry(QtCore.QRect(130, 40, 91, 23))
+        self.greyscale_button.setObjectName("greyscale_button")
+        self.greyscale_label = QLabel(Dialog)
+        self.greyscale_label.setGeometry(QtCore.QRect(20, 10, 161, 16))
+        font = QFont()
+        font.setPointSize(10)
+        self.greyscale_label.setFont(font)
+        self.greyscale_label.setObjectName("greyscale_label")
+        self.transformation_dropdown = QComboBox(Dialog)
+        self.transformation_dropdown.setGeometry(QtCore.QRect(20, 100, 131, 22))
+        self.transformation_dropdown.setObjectName("transformation_dropdown")
+        self.transformation_dropdown.addItem("")
+        self.transformation_dropdown.addItem("")
+        self.transformation_dropdown.addItem("")
+        self.transformation_dropdown.addItem("")
+        self.transformation_dropdown.addItem("")
+        self.transformation_label = QLabel(Dialog)
+        self.transformation_label.setGeometry(QtCore.QRect(20, 70, 131, 16))
+        self.transformation_label.setFont(font)
+        self.transformation_label.setObjectName("transformation_label")
+        self.transform_val_label = QLabel(Dialog)
+        self.transform_val_label.setGeometry(QtCore.QRect(190, 70, 41, 16))
+        self.transform_val_label.setFont(font)
+        self.transform_val_label.setObjectName("transform_val_label")
+        self.transform_value = QSpinBox(Dialog)
+        self.transform_value.setGeometry(QtCore.QRect(190, 100, 42, 22))
+        self.transform_value.setMaximum(255)
+        self.transform_value.setObjectName("transform_value")
+        self.transform_button = QPushButton(Dialog)
+        self.transform_button.setGeometry(QtCore.QRect(270, 100, 75, 23))
+        self.transform_button.setObjectName("transform_button")
+
+        self.retranslateUi(Dialog)
+        self.buttonBox.accepted.connect(Dialog.accept)
+        self.buttonBox.rejected.connect(Dialog.reject)
+        self.greyscale_button.clicked.connect(self.turn_greyscale)
+        QtCore.QMetaObject.connectSlotsByName(Dialog)
+
+    def retranslateUi(self, Dialog):
+        _translate = QtCore.QCoreApplication.translate
+        Dialog.setWindowTitle(_translate("Dialog", "Dialog"))
+        self.greyscale_dropdown.setItemText(0, _translate("Dialog", "Mean"))
+        self.greyscale_dropdown.setItemText(1, _translate("Dialog", "Lum"))
+        self.greyscale_dropdown.setItemText(2, _translate("Dialog", "Red"))
+        self.greyscale_dropdown.setItemText(3, _translate("Dialog", "Green"))
+        self.greyscale_dropdown.setItemText(4, _translate("Dialog", "Blue"))
+        self.greyscale_button.setText(_translate("Dialog", "Turn greyscale"))
+        self.greyscale_label.setText(_translate("Dialog", "Greyscale:"))
+        self.transformation_dropdown.setItemText(0, _translate("Dialog", "Addition"))
+        self.transformation_dropdown.setItemText(1, _translate("Dialog", "Subtraction"))
+        self.transformation_dropdown.setItemText(2, _translate("Dialog", "Multiplication"))
+        self.transformation_dropdown.setItemText(3, _translate("Dialog", "Division"))
+        self.transformation_dropdown.setItemText(4, _translate("Dialog", "Quality change"))
+        self.transformation_label.setText(_translate("Dialog", "Point transformations:"))
+        self.transform_val_label.setText(_translate("Dialog", "Value:"))
+        self.transform_button.setText(_translate("Dialog", "Transform"))
+
+    def turn_greyscale(self):
+        index = int(self.greyscale_dropdown.currentIndex())
+        path = self.parent.path_label.text()
+        if path:
+            img = Image.open(path, "r")
+            img = img.convert("RGB")
+
+            pix_val = list(img.getdata())
+
+            result_greyscale = []
+            if index == 0:
+                for i in range(len(pix_val)):
+                    val = int((pix_val[i][0] + pix_val[i][1] + pix_val[i][2]) / 3)
+                    result_greyscale.append(val)
+            elif index == 1:
+                for i in range(len(pix_val)):
+                    val = int((0.2126 * pix_val[i][0]) + (0.7152 * pix_val[i][1]) + (0.0722 * pix_val[i][2]))
+                    result_greyscale.append(val)
+            elif index == 2:
+                for i in range(len(pix_val)):
+                    val = int(pix_val[i][0])
+                    result_greyscale.append(val)
+            elif index == 3:
+                for i in range(len(pix_val)):
+                    val = int(pix_val[i][1])
+                    result_greyscale.append(val)
+            elif index == 4:
+                for i in range(len(pix_val)):
+                    val = int(pix_val[i][2])
+                    result_greyscale.append(val)
+
+            greyscale_img = Image.new('L', img.size)
+            greyscale_img.putdata(result_greyscale)
+
+            greyscale_img.save("out/greyscale.jpg")
+            self.parent.setPhotoFromPath("out/greyscale.jpg")
+        else:
+            msg = QMessageBox()
+            msg.setIcon(QMessageBox.Warning)
+            msg.setText("Load image!")
+            msg.setWindowTitle("Warning!")
+            msg.setStandardButtons(QMessageBox.Ok)
+            msg.exec_()
+
+
 
 app = QApplication(sys.argv)
 window = Window()
