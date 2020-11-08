@@ -1,4 +1,5 @@
 import math
+import operator
 import os
 from enum import Enum
 
@@ -1413,6 +1414,7 @@ class PointDialog(object):
         self.buttonBox.accepted.connect(Dialog.accept)
         self.buttonBox.rejected.connect(Dialog.reject)
         self.greyscale_button.clicked.connect(self.turn_greyscale)
+        self.transform_button.clicked.connect(self.point_transform)
         QtCore.QMetaObject.connectSlotsByName(Dialog)
 
     def retranslateUi(self, Dialog):
@@ -1486,6 +1488,101 @@ class PointDialog(object):
             msg.setStandardButtons(QMessageBox.Ok)
             msg.exec_()
 
+    def point_transform(self):
+        value = self.transform_value.value()
+        index = int(self.transformation_dropdown.currentIndex())
+        path = self.parent.path_label.text()
+
+        if path:
+            img = Image.open(path, "r")
+            pix_val = list(img.getdata())
+
+            ops = {
+                "+": operator.add,
+                "-": operator.sub,
+                "*": operator.mul,
+                "/": operator.floordiv
+            }
+            selected_ops = ""
+            if index == 0:
+                selected_ops = "+"
+            elif index == 1:
+                selected_ops = "-"
+            elif index == 2:
+                selected_ops = "*"
+            elif index == 3:
+                selected_ops = "/"
+            elif index == 4:
+                pass
+
+            result_array = []
+            op_func = ops[selected_ops]
+            if isinstance(pix_val[0], tuple):
+                try:
+                    for i in range(len(pix_val)):
+                        r = op_func(pix_val[i][0], value)
+                        g = op_func(pix_val[i][1], value)
+                        b = op_func(pix_val[i][2], value)
+
+                        if r > 255:
+                            r = 255
+                        elif r < 0:
+                            r = 0
+
+                        if g > 255:
+                            g = 255
+                        elif g < 0:
+                            g = 0
+
+                        if b > 255:
+                            b = 255
+                        elif b < 0:
+                            b = 0
+
+                        val = (r, g, b)
+                        result_array.append(val)
+
+                    new_img = Image.new('RGB', img.size)
+                    new_img.putdata(result_array)
+                    new_img.save("out/point_out.jpg")
+                    self.parent.setPhotoFromPath("out/point_out.jpg")
+                except ZeroDivisionError:
+                    msg = QMessageBox()
+                    msg.setIcon(QMessageBox.Warning)
+                    msg.setText("Dzielenie przez 0!")
+                    msg.setWindowTitle("Warning!")
+                    msg.setStandardButtons(QMessageBox.Ok)
+                    msg.exec_()
+            else:
+                try:
+                    for i in range(len(pix_val)):
+                        val = op_func(pix_val[i][0], value)
+
+                        if val > 255:
+                            val = 255
+                        elif val < 0:
+                            val = 0
+
+                        result_array.append(val)
+
+                    new_img = Image.new('L', img.size)
+                    new_img.putdata(result_array)
+                    new_img.save("out/point_out.jpg")
+                    self.parent.setPhotoFromPath("out/point_out.jpg")
+                except ZeroDivisionError:
+                    msg = QMessageBox()
+                    msg.setIcon(QMessageBox.Warning)
+                    msg.setText("Dzielenie przez 0!")
+                    msg.setWindowTitle("Warning!")
+                    msg.setStandardButtons(QMessageBox.Ok)
+                    msg.exec_()
+        else:
+            msg = QMessageBox()
+            msg.setIcon(QMessageBox.Warning)
+            msg.setText("Load image!")
+            msg.setWindowTitle("Warning!")
+            msg.setStandardButtons(QMessageBox.Ok)
+            msg.exec_()
 
 
 app = QApplication(sys.argv)
