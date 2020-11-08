@@ -1439,37 +1439,45 @@ class PointDialog(object):
         path = self.parent.path_label.text()
         if path:
             img = Image.open(path, "r")
-            img = img.convert("RGB")
+            #img = img.convert("RGB")
 
             pix_val = list(img.getdata())
 
-            result_greyscale = []
-            if index == 0:
-                for i in range(len(pix_val)):
-                    val = int((pix_val[i][0] + pix_val[i][1] + pix_val[i][2]) / 3)
-                    result_greyscale.append(val)
-            elif index == 1:
-                for i in range(len(pix_val)):
-                    val = int((0.2126 * pix_val[i][0]) + (0.7152 * pix_val[i][1]) + (0.0722 * pix_val[i][2]))
-                    result_greyscale.append(val)
-            elif index == 2:
-                for i in range(len(pix_val)):
-                    val = int(pix_val[i][0])
-                    result_greyscale.append(val)
-            elif index == 3:
-                for i in range(len(pix_val)):
-                    val = int(pix_val[i][1])
-                    result_greyscale.append(val)
-            elif index == 4:
-                for i in range(len(pix_val)):
-                    val = int(pix_val[i][2])
-                    result_greyscale.append(val)
+            if isinstance(pix_val[0], tuple):
+                result_greyscale = []
+                if index == 0:
+                    for i in range(len(pix_val)):
+                        val = int((pix_val[i][0] + pix_val[i][1] + pix_val[i][2]) / 3)
+                        result_greyscale.append(val)
+                elif index == 1:
+                    for i in range(len(pix_val)):
+                        val = int((0.2126 * pix_val[i][0]) + (0.7152 * pix_val[i][1]) + (0.0722 * pix_val[i][2]))
+                        result_greyscale.append(val)
+                elif index == 2:
+                    for i in range(len(pix_val)):
+                        val = int(pix_val[i][0])
+                        result_greyscale.append(val)
+                elif index == 3:
+                    for i in range(len(pix_val)):
+                        val = int(pix_val[i][1])
+                        result_greyscale.append(val)
+                elif index == 4:
+                    for i in range(len(pix_val)):
+                        val = int(pix_val[i][2])
+                        result_greyscale.append(val)
 
-            greyscale_img = Image.new('L', img.size)
-            greyscale_img.putdata(result_greyscale)
+                greyscale_img = Image.new('L', img.size)
+                greyscale_img.putdata(result_greyscale)
 
-            greyscale_img.save("out/greyscale.jpg")
-            self.parent.setPhotoFromPath("out/greyscale.jpg")
+                greyscale_img.save("out/greyscale.jpg")
+                self.parent.setPhotoFromPath("out/greyscale.jpg")
+            else:
+                msg = QMessageBox()
+                msg.setIcon(QMessageBox.Warning)
+                msg.setText("Image is already in greyscale!")
+                msg.setWindowTitle("Warning!")
+                msg.setStandardButtons(QMessageBox.Ok)
+                msg.exec_()
         else:
             msg = QMessageBox()
             msg.setIcon(QMessageBox.Warning)
