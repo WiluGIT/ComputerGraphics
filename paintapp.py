@@ -298,6 +298,10 @@ class Window(QMainWindow):
         else:
             self.setPhotoFromPath(filepath)
 
+        # close opened dialog if exists
+        if self.window:
+            self.window.close()
+
     def saveFile(self):
         filter = "JPG (*.jpg);;JPEG (*jpeg);;PNG(*.png);;BMP (*.bmp);; TIF (*.tif);; TIFF(*.tiff)"
         filename = QFileDialog.getSaveFileName(caption="Save Image", directory=os.curdir, filter=filter)
@@ -1363,12 +1367,14 @@ class PointDialog(object):
     def setupUi(self, Dialog, parent):
         self.parent = parent
         Dialog.setObjectName("Dialog")
-        Dialog.resize(378, 190)
+        Dialog.resize(378, 250)
+
         self.buttonBox = QDialogButtonBox(Dialog)
-        self.buttonBox.setGeometry(QtCore.QRect(10, 140, 341, 32))
+        self.buttonBox.setGeometry(QtCore.QRect(10, 200, 341, 32))
         self.buttonBox.setOrientation(QtCore.Qt.Horizontal)
         self.buttonBox.setStandardButtons(QDialogButtonBox.Cancel|QDialogButtonBox.Ok)
         self.buttonBox.setObjectName("buttonBox")
+
         self.greyscale_dropdown = QComboBox(Dialog)
         self.greyscale_dropdown.setGeometry(QtCore.QRect(20, 40, 81, 22))
         self.greyscale_dropdown.setObjectName("greyscale_dropdown")
@@ -1377,15 +1383,19 @@ class PointDialog(object):
         self.greyscale_dropdown.addItem("")
         self.greyscale_dropdown.addItem("")
         self.greyscale_dropdown.addItem("")
+
         self.greyscale_button = QPushButton(Dialog)
         self.greyscale_button.setGeometry(QtCore.QRect(130, 40, 91, 23))
         self.greyscale_button.setObjectName("greyscale_button")
         self.greyscale_label = QLabel(Dialog)
         self.greyscale_label.setGeometry(QtCore.QRect(20, 10, 161, 16))
+
         font = QFont()
         font.setPointSize(10)
+
         self.greyscale_label.setFont(font)
         self.greyscale_label.setObjectName("greyscale_label")
+
         self.transformation_dropdown = QComboBox(Dialog)
         self.transformation_dropdown.setGeometry(QtCore.QRect(20, 100, 131, 22))
         self.transformation_dropdown.setObjectName("transformation_dropdown")
@@ -1394,10 +1404,13 @@ class PointDialog(object):
         self.transformation_dropdown.addItem("")
         self.transformation_dropdown.addItem("")
         self.transformation_dropdown.addItem("")
+        self.transformation_dropdown.currentIndexChanged.connect(self.dropdown_change)
+
         self.transformation_label = QLabel(Dialog)
         self.transformation_label.setGeometry(QtCore.QRect(20, 70, 131, 16))
         self.transformation_label.setFont(font)
         self.transformation_label.setObjectName("transformation_label")
+
         self.transform_val_label = QLabel(Dialog)
         self.transform_val_label.setGeometry(QtCore.QRect(190, 70, 41, 16))
         self.transform_val_label.setFont(font)
@@ -1406,15 +1419,31 @@ class PointDialog(object):
         self.transform_value.setGeometry(QtCore.QRect(190, 100, 42, 22))
         self.transform_value.setMaximum(255)
         self.transform_value.setObjectName("transform_value")
+
         self.transform_button = QPushButton(Dialog)
         self.transform_button.setGeometry(QtCore.QRect(270, 100, 75, 23))
         self.transform_button.setObjectName("transform_button")
+
+        self.brightness_slider = QSlider(Dialog)
+        self.brightness_slider.setGeometry(QtCore.QRect(20, 170, 321, 22))
+        self.brightness_slider.setMinimum(-255)
+        self.brightness_slider.setMaximum(255)
+        self.brightness_slider.setOrientation(QtCore.Qt.Horizontal)
+        self.brightness_slider.setObjectName("brightness_slider")
+        self.brightness_slider.setVisible(False)
+
+
+        self.brightness_label = QLabel(Dialog)
+        self.brightness_label.setGeometry(QtCore.QRect(20, 140, 131, 16))
+        self.brightness_label.setVisible(False)
+        self.brightness_photo = None
 
         self.retranslateUi(Dialog)
         self.buttonBox.accepted.connect(Dialog.accept)
         self.buttonBox.rejected.connect(Dialog.reject)
         self.greyscale_button.clicked.connect(self.turn_greyscale)
         self.transform_button.clicked.connect(self.point_transform)
+        self.brightness_slider.sliderReleased.connect(self.slider_value_change)
         QtCore.QMetaObject.connectSlotsByName(Dialog)
 
     def retranslateUi(self, Dialog):
@@ -1431,17 +1460,87 @@ class PointDialog(object):
         self.transformation_dropdown.setItemText(1, _translate("Dialog", "Subtraction"))
         self.transformation_dropdown.setItemText(2, _translate("Dialog", "Multiplication"))
         self.transformation_dropdown.setItemText(3, _translate("Dialog", "Division"))
-        self.transformation_dropdown.setItemText(4, _translate("Dialog", "Quality change"))
+        self.transformation_dropdown.setItemText(4, _translate("Dialog", "Brightness change"))
         self.transformation_label.setText(_translate("Dialog", "Point transformations:"))
         self.transform_val_label.setText(_translate("Dialog", "Value:"))
         self.transform_button.setText(_translate("Dialog", "Transform"))
+        self.brightness_label.setText(_translate("Dialog", "Brightness slider:"))
+
+    def dropdown_change(self):
+        index = int(self.transformation_dropdown.currentIndex())
+        path = self.parent.path_label.text()
+        if index == 4 and path:
+            self.brightness_photo = Image.open(path, "r")
+            self.brightness_slider.setVisible(True)
+            self.brightness_label.setVisible(True)
+        else:
+            self.brightness_slider.setVisible(False)
+            self.brightness_label.setVisible(False)
+
+    def slider_value_change(self):
+        value = self.brightness_slider.value()
+        index = int(self.transformation_dropdown.currentIndex())
+        path = self.parent.path_label.text()
+
+        if path and index == 4:
+            pix_val = list(self.brightness_photo.getdata())
+            result_array = []
+            if isinstance(pix_val[0], tuple):
+                for i in range(len(pix_val)):
+                    r = pix_val[i][0] + value
+                    g = pix_val[i][1] + value
+                    b = pix_val[i][2] + value
+
+                    if r > 255:
+                        r = 255
+                    elif r < 0:
+                        r = 0
+
+                    if g > 255:
+                        g = 255
+                    elif g < 0:
+                        g = 0
+
+                    if b > 255:
+                        b = 255
+                    elif b < 0:
+                        b = 0
+
+                    val = (r, g, b)
+                    result_array.append(val)
+
+                new_img = Image.new('RGB', self.brightness_photo.size)
+                new_img.putdata(result_array)
+                new_img.save("out/point_out.jpg")
+                self.parent.setPhotoFromPath("out/point_out.jpg")
+            else:
+                for i in range(len(pix_val)):
+                    val = pix_val[i][0] + value
+
+                    if val > 255:
+                        val = 255
+                    elif val < 0:
+                        val = 0
+
+                    result_array.append(val)
+
+                new_img = Image.new('L', self.brightness_photo.size)
+                new_img.putdata(result_array)
+                new_img.save("out/point_out.jpg")
+                self.parent.setPhotoFromPath("out/point_out.jpg")
+        else:
+            msg = QMessageBox()
+            msg.setIcon(QMessageBox.Warning)
+            msg.setText("Load image!")
+            msg.setWindowTitle("Warning!")
+            msg.setStandardButtons(QMessageBox.Ok)
+            msg.exec_()
 
     def turn_greyscale(self):
         index = int(self.greyscale_dropdown.currentIndex())
         path = self.parent.path_label.text()
         if path:
             img = Image.open(path, "r")
-            #img = img.convert("RGB")
 
             pix_val = list(img.getdata())
 
@@ -1512,8 +1611,6 @@ class PointDialog(object):
                 selected_ops = "*"
             elif index == 3:
                 selected_ops = "/"
-            elif index == 4:
-                pass
 
             result_array = []
             op_func = ops[selected_ops]
