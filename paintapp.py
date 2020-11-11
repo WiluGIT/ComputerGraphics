@@ -151,27 +151,27 @@ class Window(QMainWindow):
 
         self.creator_label = QLabel(self)
         self.creator_label.setGeometry(QRect(1050, 70, 200, 30))
-        self.creator_label.setText("Kreator tekstowy")
+        self.creator_label.setText("Text creator")
         self.text_creator_section.append(self.creator_label)
 
         self.point_start_label = QLabel(self)
         self.point_start_label.setGeometry(QRect(1050, 100, 200, 30))
-        self.point_start_label.setText("Punkt startowy:")
+        self.point_start_label.setText("Point start:")
         self.text_creator_section.append(self.point_start_label)
 
         self.point_end_label = QLabel(self)
         self.point_end_label.setGeometry(QRect(1150, 100, 200, 30))
-        self.point_end_label.setText("Punkt końcowy:")
+        self.point_end_label.setText("Pont end:")
         self.text_creator_section.append(self.point_end_label)
 
         self.width_label = QLabel(self)
         self.width_label.setGeometry(QRect(1050, 70, 200, 30))
-        self.width_label.setText("Szerokość:")
+        self.width_label.setText("Width:")
         self.resizer_text_section.append(self.width_label)
 
         self.height_label = QLabel(self)
         self.height_label.setGeometry(QRect(1150, 70, 200, 30))
-        self.height_label.setText("Wysokość:")
+        self.height_label.setText("Height:")
         self.resizer_text_section.append(self.height_label)
 
         self.point_start_x1_label = QLabel(self)
@@ -194,7 +194,7 @@ class Window(QMainWindow):
         self.point_end_y2_label.setText("Y2:")
         self.text_creator_section.append(self.point_end_y2_label)
 
-        self.size_select_box_label = QLabel("Rozmiar:", self)
+        self.size_select_box_label = QLabel("Size:", self)
         self.size_select_box_label.setGeometry(1050, 200, 50, 30)
         self.text_creator_section.append(self.size_select_box_label)
 
@@ -503,7 +503,7 @@ class Window(QMainWindow):
         return (maxAllowed - minAllowed) * (unscaledNum - min) / (max - min) + minAllowed
 
     def drawLine(self):
-        self.shape_label.setText("Narzędzie: Linia")
+        self.shape_label.setText("Tool: Line")
         self.clearButtonsBackground(self.line_button)
         self.selected_tool = ToolSelect.Line.value
         self.graphics_view.scene.clearSelection()
@@ -513,7 +513,7 @@ class Window(QMainWindow):
         self.setMovable(False)
 
     def drawRect(self):
-        self.shape_label.setText("Narzędzie: Prostokąt")
+        self.shape_label.setText("Tool: Rectangle")
         self.clearButtonsBackground(self.rect_button)
         self.selected_tool = ToolSelect.Rectangle.value
         self.graphics_view.scene.clearSelection()
@@ -523,7 +523,7 @@ class Window(QMainWindow):
         self.setMovable(False)
 
     def drawEllipse(self):
-        self.shape_label.setText("Narzędzie: Elipsa")
+        self.shape_label.setText("Tool: Ellipse")
         self.clearButtonsBackground(self.ellipse_button)
         self.selected_tool = ToolSelect.Ellipse.value
         self.graphics_view.scene.clearSelection()
@@ -533,7 +533,7 @@ class Window(QMainWindow):
         self.setMovable(False)
 
     def selectItem(self):
-        self.shape_label.setText("Narzędzie: Zaznacz")
+        self.shape_label.setText("Tool: Select")
         self.clearButtonsBackground(self.select_button)
         self.selected_tool = ToolSelect.Select.value
         self.graphics_view.scene.clearSelection()
@@ -543,7 +543,7 @@ class Window(QMainWindow):
         self.setMovable(True)
 
     def resizeItem(self):
-        self.shape_label.setText("Narzędzie: Zmiana Rozmiaru")
+        self.shape_label.setText("Tool: Size change")
         self.clearButtonsBackground(self.resize_button)
         self.selected_tool = ToolSelect.Resize.value
         self.graphics_view.scene.clearSelection()
