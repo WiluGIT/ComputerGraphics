@@ -38,6 +38,8 @@ class Window(QMainWindow):
     end_point_cords = QPoint(0, 0)
     # selected tool
     selected_tool = ToolSelect.Select.value
+    # mask value array
+    mask_array = []
     def __init__(self):
         super().__init__()
         self.setWindowTitle("PaintApp")
@@ -133,8 +135,12 @@ class Window(QMainWindow):
         self.point_button.clicked.connect(self.show_point_dialog)
 
         self.mask_button = QPushButton("Create mask", self)
-        self.mask_button.setGeometry(QtCore.QRect(200, 510, 80, 20))
+        self.mask_button.setGeometry(QtCore.QRect(200, 530, 80, 20))
         self.mask_button.clicked.connect(self.show_mask_dialog)
+
+        self.apply_filter_button = QPushButton("Apply filter", self)
+        self.apply_filter_button.setGeometry(500, 540, 100, 30)
+        self.apply_filter_button.clicked.connect(self.apply_filters)
 
         # labels
         self.photo = QLabel(self)
@@ -206,13 +212,17 @@ class Window(QMainWindow):
         self.colorLabel.setStyleSheet("QLabel { background-color: black}")
 
         self.maskValueInfoLabel = QLabel("Selected mask:", self)
-        self.maskValueInfoLabel.setGeometry(QtCore.QRect(310, 500, 80, 100))
+        self.maskValueInfoLabel.setGeometry(QtCore.QRect(310, 520, 80, 100))
         self.maskValueInfoLabel.setAlignment(Qt.AlignTop)
         self.maskValueInfoLabel.setVisible(False)
 
         self.maskValueLabel = QLabel("", self)
-        self.maskValueLabel.setGeometry(QtCore.QRect(310, 520, 80, 100))
+        self.maskValueLabel.setGeometry(QtCore.QRect(310, 540, 80, 90))
         self.maskValueLabel.setAlignment(Qt.AlignTop)
+
+        self.filter_label = QLabel("Filters:", self)
+        self.filter_label.setGeometry(QtCore.QRect(400, 520, 80, 100))
+        self.filter_label.setAlignment(Qt.AlignTop)
 
         #line edit
         self.point_start_x1_edit = QLineEdit(self)
@@ -250,6 +260,14 @@ class Window(QMainWindow):
         self.size_select_box.currentIndexChanged.connect(self.size_combo_box)
         self.text_creator_section.append(self.size_select_box)
 
+        self.filter_select_box = QComboBox(self)
+        self.filter_select_box.setGeometry(400, 540, 100, 30)
+        self.filter_select_box.addItem("Smoothing filter")
+        self.filter_select_box.addItem("Median filter")
+        self.filter_select_box.addItem("Sobel filter")
+        self.filter_select_box.addItem("High-pass filter")
+        self.filter_select_box.addItem("Gauss filter")
+        self.filter_select_box.addItem("Convolution")
         # regex
         y_regex = QtCore.QRegExp("([0-9]|[1-8][0-9]|9[0-9]|[1-3][0-9]{2}|4[0-3][0-9]|440)")  # value between 0 and 440
         y_validator = QRegExpValidator(y_regex)
@@ -269,6 +287,213 @@ class Window(QMainWindow):
         # sections visibility
         self.setTextCreatorSectionVisibility(False)
         self.setResizerVisabilitySection(False)
+
+    def apply_filter_from_mask(self, mask):
+        img = Image.open(self.path_label.text(), "r")
+        np_img = np.asarray(img)
+
+        pix_val = list(img.getdata())
+        maskLen = len(mask[0])
+
+        window_val = 0
+        if maskLen == 3:
+            window_val = 3
+        elif maskLen == 5:
+            window_val = 5
+        elif maskLen == 7:
+            window_val = 7
+
+        pad_w = int(window_val / 2)
+        mask_weight = 0
+        for k in range(window_val):
+            for l in range(window_val):
+                mask_weight += mask[k][l]
+        if mask_weight == 0:
+            mask_weight = 1
+
+        result_array = np.zeros(shape=(len(np_img), len(np_img[0]), 3))
+
+        if isinstance(pix_val[0], tuple):
+            k_counter = 0
+            l_counter = 0
+            for i in range(pad_w, len(np_img) - pad_w):
+                for j in range(pad_w, len(np_img[0]) - pad_w):
+                    sum_r = 0
+                    sum_g = 0
+                    sum_b = 0
+                    for k in range(window_val):
+                        for l in range(window_val):
+                            sum_r += np_img[k + k_counter][l + l_counter][0] * mask[k][l]
+                            sum_g += np_img[k + k_counter][l + l_counter][1] * mask[k][l]
+                            sum_b += np_img[k + k_counter][l + l_counter][2] * mask[k][l]
+
+                    pix_r = sum_r / mask_weight
+                    pix_g = sum_g / mask_weight
+                    pix_b = sum_b / mask_weight
+
+                    if pix_r > 255:
+                        pix_r = 255
+                    elif pix_r < 0:
+                        pix_r = 0
+                    if pix_g > 255:
+                        pix_g = 255
+                    elif pix_g < 0:
+                        pix_g = 0
+                    if pix_b > 255:
+                        pix_b = 255
+                    elif pix_b < 0:
+                        pix_b = 0
+
+                    result_array[i, j, 0] = pix_r
+                    result_array[i, j, 1] = pix_g
+                    result_array[i, j, 2] = pix_b
+
+                    l_counter += 1
+                k_counter += 1
+                l_counter = 0
+            img_filter = Image.fromarray(result_array.astype('uint8'), 'RGB')
+            img_filter.save("out/conv_filter.jpg")
+            self.setPhotoFromPath("out/conv_filter.jpg")
+        else:
+            img = img.convert("RGB")
+            np_img = np.asarray(img)
+            k_counter = 0
+            l_counter = 0
+            for i in range(pad_w, len(np_img) - pad_w):
+                for j in range(pad_w, len(np_img[0]) - pad_w):
+                    sum_g = 0
+                    for k in range(window_val):
+                        for l in range(window_val):
+                            sum_g += np_img[k + k_counter][l + l_counter][0] * mask[k][l]
+
+                    pix_g = sum_g / mask_weight
+
+                    if pix_g > 255:
+                        pix_g = 255
+                    elif pix_g < 0:
+                        pix_g = 0
+
+                    result_array[i, j, 0] = pix_g
+                    result_array[i, j, 1] = pix_g
+                    result_array[i, j, 2] = pix_g
+
+                    l_counter += 1
+                k_counter += 1
+                l_counter = 0
+
+            img_filter = Image.fromarray(result_array.astype('uint8'), 'RGB')
+            img_filter.save("out/conv_filter.jpg")
+            self.setPhotoFromPath("out/conv_filter.jpg")
+
+    def apply_median_filter(self):
+        img = Image.open(self.path_label.text(), "r")
+        # numpy array
+        np_img = np.asarray(img)
+
+        pix_val = list(img.getdata())
+        # input data
+        width = np_img.shape[1]
+        height = np_img.shape[0]
+        result_array = np.zeros(shape=(height, width, 3))
+
+        window_val = 3
+
+        pad_w = int(window_val / 2)
+        mask_size = window_val * window_val
+        median_index = int(((mask_size + 1) / 2) - 1)
+        r = [0] * mask_size
+        g = [0] * mask_size
+        b = [0] * mask_size
+        if isinstance(pix_val[0], tuple):
+            for i in range(pad_w, height - pad_w):
+                for j in range(pad_w, width - pad_w):
+                    mask_count = 0
+                    for k in range(window_val):
+                        for l in range(window_val):
+                            r[mask_count] = np_img[i + k - pad_w][j + l - pad_w][0]
+                            g[mask_count] = np_img[i + k - pad_w][j + l - pad_w][1]
+                            b[mask_count] = np_img[i + k - pad_w][j + l - pad_w][2]
+                            mask_count += 1
+
+                    r.sort()
+                    g.sort()
+                    b.sort()
+
+                    result_array[i, j, 0] = r[median_index]
+                    result_array[i, j, 1] = g[median_index]
+                    result_array[i, j, 2] = b[median_index]
+
+            img_filter = Image.fromarray(result_array.astype('uint8'), 'RGB')
+            img_filter.save("out/median_filter.jpg")
+            self.setPhotoFromPath("out/median_filter.jpg")
+        else:
+            img = img.convert("RGB")
+            np_img = np.asarray(img)
+            for i in range(pad_w, height - pad_w):
+                for j in range(pad_w, width - pad_w):
+                    mask_count = 0
+                    for k in range(window_val):
+                        for l in range(window_val):
+                            g[mask_count] = np_img[i + k - pad_w][j + l - pad_w][0]
+                            mask_count += 1
+
+                    g.sort()
+
+                    result_array[i, j, 0] = g[median_index]
+                    result_array[i, j, 1] = g[median_index]
+                    result_array[i, j, 2] = g[median_index]
+
+            img_filter = Image.fromarray(result_array.astype('uint8'), 'RGB')
+            img_filter.save("out/median_filter.jpg")
+            self.setPhotoFromPath("out/median_filter.jpg")
+
+    def apply_filters(self):
+        index = int(self.filter_select_box.currentIndex())
+        if self.path_label.text():
+            if index == 0:
+                # smoothing
+                mask = [[1, 1, 1],
+                        [1, 4, 1],
+                        [1, 1, 1]]
+                self.apply_filter_from_mask(mask)
+            elif index == 1:
+                self.apply_median_filter()
+            elif index == 2:
+                # sobel
+                mask = [[1, 2, 1],
+                        [0, 0, 0],
+                        [-1, -2, -1]]
+                self.apply_filter_from_mask(mask)
+            elif index == 3:
+                # high-pass
+                mask = [[-1, -1, -1],
+                        [-1, 9, -1],
+                        [-1, -1, -1]]
+                self.apply_filter_from_mask(mask)
+            elif index == 4:
+                # gasuss
+                mask = [[1, 2, 1],
+                        [2, 4, 2],
+                        [1, 2, 1]]
+                self.apply_filter_from_mask(mask)
+            elif index == 5:
+                if len(self.mask_array) > 0:
+                    mask = self.mask_array
+                    self.apply_filter_from_mask(mask)
+                else:
+                    msg = QMessageBox()
+                    msg.setIcon(QMessageBox.Warning)
+                    msg.setText("Create mask to apply convolution filter")
+                    msg.setWindowTitle("Warning!")
+                    msg.setStandardButtons(QMessageBox.Ok)
+                    msg.exec_()
+        else:
+            msg = QMessageBox()
+            msg.setIcon(QMessageBox.Warning)
+            msg.setText("Load image to apply filter")
+            msg.setWindowTitle("Warning!")
+            msg.setStandardButtons(QMessageBox.Ok)
+            msg.exec_()
 
     def show_cube(self):
         self.window = CubeWindow()
@@ -307,6 +532,7 @@ class Window(QMainWindow):
 
         if self.window.exec_() == 1:
             self.maskValueLabel.setText(self.ui.maskLabel)
+            self.mask_array = self.ui.maskArray
             self.maskValueInfoLabel.setVisible(True)
 
     def openFile(self):
@@ -320,7 +546,7 @@ class Window(QMainWindow):
             self.setPhotoFromPath(filepath)
 
         # close opened dialog if exists
-        if self.window:
+        if type(self.window) == QDialog:
             self.window.close()
 
     def saveFile(self):
