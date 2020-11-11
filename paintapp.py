@@ -471,7 +471,7 @@ class Window(QMainWindow):
                         [-1, -1, -1]]
                 self.apply_filter_from_mask(mask)
             elif index == 4:
-                # gasuss
+                # gauss
                 mask = [[1, 2, 1],
                         [2, 4, 2],
                         [1, 2, 1]]
@@ -1885,10 +1885,10 @@ class PointDialog(object):
                         val = (r, g, b)
                         result_array.append(val)
 
-                    new_img = Image.new('RGB', img.size)
-                    new_img.putdata(result_array)
-                    new_img.save("out/point_out.jpg")
-                    self.parent.setPhotoFromPath("out/point_out.jpg")
+                    # new_img = Image.new('RGB', img.size)
+                    # new_img.putdata(result_array)
+                    # new_img.save("out/point_out.png")
+                    # self.parent.setPhotoFromPath("out/point_out.png")
                 except ZeroDivisionError:
                     msg = QMessageBox()
                     msg.setIcon(QMessageBox.Warning)
@@ -1926,6 +1926,7 @@ class PointDialog(object):
             msg.setWindowTitle("Warning!")
             msg.setStandardButtons(QMessageBox.Ok)
             msg.exec_()
+
 
 class MaskDialog(object):
     def setupUi(self, MaskDialog):
