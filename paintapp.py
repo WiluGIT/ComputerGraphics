@@ -7,6 +7,7 @@ import numpy as np
 from OpenGL.arrays import vbo
 from PIL import Image
 import cv2
+from PIL.ImageQt import ImageQt
 from PySide2.QtOpenGL import QGLWidget
 from PySide2.QtWidgets import QApplication, QMainWindow, QGraphicsScene, QPushButton, \
     QGraphicsView, QGraphicsItem, QLabel, QGraphicsLineItem, QGraphicsRectItem, QGraphicsEllipseItem, QGraphicsObject, \
@@ -520,10 +521,20 @@ class Window(QMainWindow):
             self.size_combo_box()
 
     def show_point_dialog(self):
-        self.window = QDialog()
-        self.ui = PointDialog()
-        self.ui.setupUi(self.window, self)
-        self.window.show()
+        if self.path_label.text():
+            self.window = QDialog()
+            self.ui = PointDialog()
+            self.ui.setupUi(self.window, self)
+            if self.window.exec_() == 1:
+                self.ui.brightness_photo.save("out/point_out.jpg")
+                self.setPhotoFromPath("out/point_out.jpg")
+        else:
+            msg = QMessageBox()
+            msg.setIcon(QMessageBox.Warning)
+            msg.setText("Load image!")
+            msg.setWindowTitle("Warning!")
+            msg.setStandardButtons(QMessageBox.Ok)
+            msg.exec_()
 
     def show_mask_dialog(self):
         self.window = QDialog()
@@ -1609,6 +1620,7 @@ class GLWidget(QGLWidget):
             angle -= 360
         return angle
 
+
 class PointDialog(object):
     def setupUi(self, Dialog, parent):
         self.parent = parent
@@ -1682,7 +1694,7 @@ class PointDialog(object):
         self.brightness_label = QLabel(Dialog)
         self.brightness_label.setGeometry(QtCore.QRect(20, 140, 131, 16))
         self.brightness_label.setVisible(False)
-        self.brightness_photo = None
+        self.brightness_photo = Image.open(self.parent.path_label.text(), "r")
 
         self.retranslateUi(Dialog)
         self.buttonBox.accepted.connect(Dialog.accept)
@@ -1712,11 +1724,26 @@ class PointDialog(object):
         self.transform_button.setText(_translate("Dialog", "Transform"))
         self.brightness_label.setText(_translate("Dialog", "Brightness slider:"))
 
+    def set_photo_result(self, type):
+        photo = self.brightness_photo
+        if type == "RGB":
+            photo.convert("RGB")
+            data = photo.tobytes("raw", "RGB")
+            qim = QImage(data, self.brightness_photo.size[0], self.brightness_photo.size[1], QImage.Format_RGB888)
+            scaledImg = qim.scaled(840, 440, Qt.IgnoreAspectRatio)
+            pixmap = QPixmap(scaledImg)
+            self.parent.photo.setPixmap(pixmap)
+        elif type == "L":
+            photo.convert("L")
+            data = photo.tobytes("raw", "L")
+            qim = QImage(data, self.brightness_photo.size[0], self.brightness_photo.size[1], QImage.Format_Grayscale8)
+            scaledImg = qim.scaled(840, 440, Qt.IgnoreAspectRatio)
+            pixmap = QPixmap(scaledImg)
+            self.parent.photo.setPixmap(pixmap)
+
     def dropdown_change(self):
         index = int(self.transformation_dropdown.currentIndex())
-        path = self.parent.path_label.text()
-        if index == 4 and path:
-            self.brightness_photo = Image.open(path, "r")
+        if index == 4:
             self.brightness_slider.setVisible(True)
             self.brightness_label.setVisible(True)
         else:
@@ -1757,11 +1784,11 @@ class PointDialog(object):
 
                 new_img = Image.new('RGB', self.brightness_photo.size)
                 new_img.putdata(result_array)
-                new_img.save("out/point_out.jpg")
-                self.parent.setPhotoFromPath("out/point_out.jpg")
+                self.brightness_photo = new_img
+                self.set_photo_result("RGB")
             else:
                 for i in range(len(pix_val)):
-                    val = pix_val[i][0] + value
+                    val = pix_val[i] + value
 
                     if val > 255:
                         val = 255
@@ -1772,8 +1799,8 @@ class PointDialog(object):
 
                 new_img = Image.new('L', self.brightness_photo.size)
                 new_img.putdata(result_array)
-                new_img.save("out/point_out.jpg")
-                self.parent.setPhotoFromPath("out/point_out.jpg")
+                self.brightness_photo = new_img
+                self.set_photo_result("L")
         else:
             msg = QMessageBox()
             msg.setIcon(QMessageBox.Warning)
@@ -1786,9 +1813,7 @@ class PointDialog(object):
         index = int(self.greyscale_dropdown.currentIndex())
         path = self.parent.path_label.text()
         if path:
-            img = Image.open(path, "r")
-
-            pix_val = list(img.getdata())
+            pix_val = list(self.brightness_photo.getdata())
 
             if isinstance(pix_val[0], tuple):
                 result_greyscale = []
@@ -1813,11 +1838,10 @@ class PointDialog(object):
                         val = int(pix_val[i][2])
                         result_greyscale.append(val)
 
-                greyscale_img = Image.new('L', img.size)
+                greyscale_img = Image.new('L', self.brightness_photo.size)
                 greyscale_img.putdata(result_greyscale)
-
-                greyscale_img.save("out/greyscale.jpg")
-                self.parent.setPhotoFromPath("out/greyscale.jpg")
+                self.brightness_photo = greyscale_img
+                self.set_photo_result("L")
             else:
                 msg = QMessageBox()
                 msg.setIcon(QMessageBox.Warning)
@@ -1834,13 +1858,12 @@ class PointDialog(object):
             msg.exec_()
 
     def point_transform(self):
-        value = self.transform_value.value()
+        value = int(self.transform_value.value())
         index = int(self.transformation_dropdown.currentIndex())
         path = self.parent.path_label.text()
 
         if path:
-            img = Image.open(path, "r")
-            pix_val = list(img.getdata())
+            pix_val = list(self.brightness_photo.getdata())
 
             ops = {
                 "+": operator.add,
@@ -1885,10 +1908,10 @@ class PointDialog(object):
                         val = (r, g, b)
                         result_array.append(val)
 
-                    # new_img = Image.new('RGB', img.size)
-                    # new_img.putdata(result_array)
-                    # new_img.save("out/point_out.png")
-                    # self.parent.setPhotoFromPath("out/point_out.png")
+                    new_img = Image.new('RGB', self.brightness_photo.size)
+                    new_img.putdata(result_array)
+                    self.brightness_photo = new_img
+                    self.set_photo_result("RGB")
                 except ZeroDivisionError:
                     msg = QMessageBox()
                     msg.setIcon(QMessageBox.Warning)
@@ -1899,7 +1922,7 @@ class PointDialog(object):
             else:
                 try:
                     for i in range(len(pix_val)):
-                        val = op_func(pix_val[i][0], value)
+                        val = op_func(pix_val[i], value)
 
                         if val > 255:
                             val = 255
@@ -1908,10 +1931,10 @@ class PointDialog(object):
 
                         result_array.append(val)
 
-                    new_img = Image.new('L', img.size)
+                    new_img = Image.new('L', self.brightness_photo.size)
                     new_img.putdata(result_array)
-                    new_img.save("out/point_out.jpg")
-                    self.parent.setPhotoFromPath("out/point_out.jpg")
+                    self.brightness_photo = new_img
+                    self.set_photo_result("L")
                 except ZeroDivisionError:
                     msg = QMessageBox()
                     msg.setIcon(QMessageBox.Warning)
@@ -1926,6 +1949,7 @@ class PointDialog(object):
             msg.setWindowTitle("Warning!")
             msg.setStandardButtons(QMessageBox.Ok)
             msg.exec_()
+
 
 
 class MaskDialog(object):
