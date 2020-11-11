@@ -19,6 +19,7 @@ from PySide2 import QtCore, QtOpenGL
 import sys
 import OpenGL.GL as gl
 from OpenGL import GLU
+import matplotlib.pyplot as plt
 
 
 class ToolSelect(Enum):
@@ -143,6 +144,18 @@ class Window(QMainWindow):
         self.apply_filter_button.setGeometry(500, 540, 100, 30)
         self.apply_filter_button.clicked.connect(self.apply_filters)
 
+        self.plot_histogram_button = QPushButton("Plot histogram", self)
+        self.plot_histogram_button.setGeometry(620, 540, 100, 30)
+        self.plot_histogram_button.clicked.connect(self.plot_histogram)
+
+        self.equalize_histogram_button = QPushButton("Equalize histogram", self)
+        self.equalize_histogram_button.setGeometry(620, 570, 100, 30)
+        self.equalize_histogram_button.clicked.connect(self.equalize_histogram)
+
+        self.stretch_histogram_button = QPushButton("Stretch histogram", self)
+        self.stretch_histogram_button.setGeometry(750, 570, 100, 30)
+        self.stretch_histogram_button.clicked.connect(self.stretch_histogram)
+
         # labels
         self.photo = QLabel(self)
         self.photo.setGeometry(200, 50, self.graphic_view_width, self.graphic_view_height)
@@ -222,8 +235,16 @@ class Window(QMainWindow):
         self.maskValueLabel.setAlignment(Qt.AlignTop)
 
         self.filter_label = QLabel("Filters:", self)
-        self.filter_label.setGeometry(QtCore.QRect(400, 520, 80, 100))
+        self.filter_label.setGeometry(QtCore.QRect(400, 520, 80, 30))
         self.filter_label.setAlignment(Qt.AlignTop)
+
+        self.histogram_label = QLabel("Histograms:", self)
+        self.histogram_label.setGeometry(QtCore.QRect(620, 520, 80, 30))
+        self.histogram_label.setAlignment(Qt.AlignTop)
+
+        self.histogram_range_label = QLabel("Range from a to b:", self)
+        self.histogram_range_label.setGeometry(QtCore.QRect(750, 520, 100, 30))
+        self.histogram_range_label.setAlignment(Qt.AlignTop)
 
         #line edit
         self.point_start_x1_edit = QLineEdit(self)
@@ -249,6 +270,14 @@ class Window(QMainWindow):
         self.height_edit = QLineEdit(self)
         self.height_edit.setGeometry(QRect(1180, 100, 30, 30))
         self.resizer_text_section.append(self.height_edit)
+
+        self.histogram_range_a_edit = QLineEdit(self)
+        self.histogram_range_a_edit.setGeometry(QRect(750, 540, 30, 20))
+        self.histogram_range_a_edit.setText("0")
+
+        self.histogram_range_b_edit = QLineEdit(self)
+        self.histogram_range_b_edit.setGeometry(QRect(800, 540, 30, 20))
+        self.histogram_range_b_edit.setText("255")
 
         # select box
         self.size_select_box = QComboBox(self)
@@ -276,6 +305,9 @@ class Window(QMainWindow):
         x_regex = QtCore.QRegExp("([0-9]|[1-8][0-9]|9[0-9]|[1-7][0-9]{2}|8[0-3][0-9]|840)")  # value between 0 and 840
         x_validator = QRegExpValidator(x_regex)
 
+        rgb_regex = QtCore.QRegExp("([0-9]|[1-8][0-9]|9[0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])") # value between 0 and 255
+        rgb_validator = QRegExpValidator(rgb_regex)
+
         self.point_start_x1_edit.setValidator(x_validator)
         self.point_end_x2_edit.setValidator(x_validator)
 
@@ -285,9 +317,88 @@ class Window(QMainWindow):
         self.height_edit.setValidator(y_validator)
         self.width_edit.setValidator(x_validator)
 
+        self.histogram_range_b_edit.setValidator(rgb_validator)
+        self.histogram_range_a_edit.setValidator(rgb_validator)
+
         # sections visibility
         self.setTextCreatorSectionVisibility(False)
         self.setResizerVisabilitySection(False)
+
+    def plot_histogram(self):
+        try:
+            img = Image.open(self.path_label.text(), "r")
+            pix_val = list(img.getdata())
+
+            if isinstance(pix_val[0], tuple):
+                r = []
+                g = []
+                b = []
+                for i in range(len(pix_val)):
+                    r.append(pix_val[i][0])
+                    g.append(pix_val[i][1])
+                    b.append(pix_val[i][2])
+
+                r = self.count_pixels_histogram(r)
+                plt.subplot(4, 1, 1)
+                plt.title('RED', size=16, y=1.12)
+                plt.bar(list(r.keys()), r.values(), color='r')
+
+                g = self.count_pixels_histogram(g)
+                plt.subplot(4, 1, 2)
+                plt.title('GREEN', size=16, y=1.12)
+                plt.bar(list(g.keys()), g.values(), color='g')
+
+                b = self.count_pixels_histogram(b)
+                plt.subplot(4, 1, 3)
+                plt.title('BLUE', size=16, y=1.12)
+                plt.bar(list(b.keys()), b.values(), color='b')
+
+                avaraged = self.avaraged_histogram(r, g, b)
+                plt.subplot(4, 1, 4)
+                plt.title('AVARAGED (R + G +B) / 3', size=16, y=1.12)
+                plt.bar(list(avaraged.keys()), avaraged.values(), color='y')
+                plt.tight_layout()
+                plt.show()
+            else:
+                img = img.convert("RGB")
+                np_img = np.asarray(img)
+                pix_val = list(img.getdata())
+                gray = []
+                for i in range(len(pix_val)):
+                    gray.append(pix_val[i][0])
+                px = self.count_pixels_histogram(gray)
+                plt.bar(list(px.keys()), px.values(), color='gray')
+                plt.title('GREYSCALE', size=16, y=1.1)
+                plt.tight_layout()
+                plt.show()
+        except AttributeError:
+            msg = QMessageBox()
+            msg.setIcon(QMessageBox.Information)
+            msg.setText("Select image to create histogram")
+            msg.setWindowTitle("Warning!")
+            msg.setStandardButtons(QMessageBox.Ok | QMessageBox.Cancel)
+
+            msg.exec_()
+
+    def equalize_histogram(self):
+        print("2")
+        pass
+
+    def stretch_histogram(self):
+        print("3")
+        pass
+
+    def count_pixels_histogram(self, seq):
+        hist = dict([(x, 0) for x in range(256)])
+        for i in seq:
+            hist[i] = hist.get(i, 0) + 1
+        return hist
+
+    def avaraged_histogram(self, r, g, b):
+        hist = dict([(x, 0) for x in range(256)])
+        for i in range(len(r)):
+            hist[i] = (r[i] + g[i] + b[i]) / 3
+        return hist
 
     def apply_filter_from_mask(self, mask):
         img = Image.open(self.path_label.text(), "r")
