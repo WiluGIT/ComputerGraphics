@@ -11,7 +11,7 @@ from PySide2.QtOpenGL import QGLWidget
 from PySide2.QtWidgets import QApplication, QMainWindow, QGraphicsScene, QPushButton, \
     QGraphicsView, QGraphicsItem, QLabel, QGraphicsLineItem, QGraphicsRectItem, QGraphicsEllipseItem, QGraphicsObject, \
     QButtonGroup, QLineEdit, QLayout, QMessageBox, QComboBox, QStyle, QMenuBar, QMenu, QAction, QStatusBar, QFileDialog, \
-    QGraphicsPixmapItem, QDialogButtonBox, QSlider, QDialog, QSpinBox, QAbstractSlider, QVBoxLayout, QWidget
+    QGraphicsPixmapItem, QDialogButtonBox, QSlider, QDialog, QSpinBox, QAbstractSlider, QVBoxLayout, QWidget, QTextEdit
 from PySide2.QtGui import QBrush, QPen, QFont, QPainter, QColor, QRegExpValidator, QIcon, QPixmap, QImage
 from PySide2.QtCore import Qt, QRect, QPoint, Signal, QPointF, QRectF, Slot, QLineF, QSize
 from PySide2 import QtCore, QtOpenGL
@@ -132,6 +132,10 @@ class Window(QMainWindow):
         self.point_button.setGeometry(QtCore.QRect(20, 250, 120, 20))
         self.point_button.clicked.connect(self.show_point_dialog)
 
+        self.mask_button = QPushButton("Create mask", self)
+        self.mask_button.setGeometry(QtCore.QRect(200, 510, 80, 20))
+        self.mask_button.clicked.connect(self.show_mask_dialog)
+
         # labels
         self.photo = QLabel(self)
         self.photo.setGeometry(200, 50, self.graphic_view_width, self.graphic_view_height)
@@ -201,6 +205,14 @@ class Window(QMainWindow):
         self.colorLabel.setGeometry(QtCore.QRect(20, 180, 40, 40))
         self.colorLabel.setStyleSheet("QLabel { background-color: black}")
 
+        self.maskValueInfoLabel = QLabel("Selected mask:", self)
+        self.maskValueInfoLabel.setGeometry(QtCore.QRect(310, 500, 80, 100))
+        self.maskValueInfoLabel.setAlignment(Qt.AlignTop)
+        self.maskValueInfoLabel.setVisible(False)
+
+        self.maskValueLabel = QLabel("", self)
+        self.maskValueLabel.setGeometry(QtCore.QRect(310, 520, 80, 100))
+        self.maskValueLabel.setAlignment(Qt.AlignTop)
 
         #line edit
         self.point_start_x1_edit = QLineEdit(self)
@@ -288,6 +300,15 @@ class Window(QMainWindow):
         self.ui.setupUi(self.window, self)
         self.window.show()
 
+    def show_mask_dialog(self):
+        self.window = QDialog()
+        self.ui = MaskDialog()
+        self.ui.setupUi(self.window)
+
+        if self.window.exec_() == 1:
+            self.maskValueLabel.setText(self.ui.maskLabel)
+            self.maskValueInfoLabel.setVisible(True)
+
     def openFile(self):
         filter = "AllFiles (*.jpg *jpeg *.png *.bmp *.tiff *tif *ppm);;JPEG (*.jpg *jpeg);;PNG(*.png);;BMP (*.bmp);; TIF (*.tiff *.tif);; PPM (*ppm)"
         file = QFileDialog.getOpenFileName(filter=filter)
@@ -306,7 +327,6 @@ class Window(QMainWindow):
         filter = "JPG (*.jpg);;JPEG (*jpeg);;PNG(*.png);;BMP (*.bmp);; TIF (*.tif);; TIFF(*.tiff)"
         filename = QFileDialog.getSaveFileName(caption="Save Image", directory=os.curdir, filter=filter)
 
-        #pixmap = self.photo.pixmap()
         pixmap = QPixmap(self.path_label.text())
         if (filename[1] == "JPG (*.jpg)") or (filename[1] == "JPEG (*jpeg)"):
             returnCode = self.showDialog()
@@ -1680,6 +1700,106 @@ class PointDialog(object):
             msg.setWindowTitle("Warning!")
             msg.setStandardButtons(QMessageBox.Ok)
             msg.exec_()
+
+class MaskDialog(object):
+    def setupUi(self, MaskDialog):
+        MaskDialog.setObjectName("MaskDialog")
+        MaskDialog.resize(308, 198)
+        self.buttonBox = QDialogButtonBox(MaskDialog)
+        self.buttonBox.setGeometry(QtCore.QRect(10, 160, 151, 32))
+        self.buttonBox.setOrientation(QtCore.Qt.Horizontal)
+        self.buttonBox.setStandardButtons(QDialogButtonBox.Cancel|QDialogButtonBox.Ok)
+        self.buttonBox.setObjectName("buttonBox")
+
+        self.comboBox = QComboBox(MaskDialog)
+        self.comboBox.setGeometry(QtCore.QRect(210, 20, 69, 22))
+        self.comboBox.setObjectName("comboBox")
+        self.comboBox.addItem("")
+        self.comboBox.addItem("")
+        self.comboBox.addItem("")
+
+        self.textEdit = QTextEdit(MaskDialog)
+        self.textEdit.setGeometry(QtCore.QRect(10, 10, 151, 131))
+        self.textEdit.setObjectName("textEdit")
+
+        self.confirmMaskButton = QPushButton(MaskDialog)
+        self.confirmMaskButton.setGeometry(QtCore.QRect(210, 60, 75, 23))
+        self.confirmMaskButton.setObjectName("confirmMaskButton")
+
+        self.maskLabel = ""
+        self.maskArray = []
+
+        self.retranslateUi(MaskDialog)
+
+        self.buttonBox.accepted.connect(MaskDialog.accept)
+        self.buttonBox.rejected.connect(MaskDialog.reject)
+        self.confirmMaskButton.clicked.connect(self.confirm_mask)
+        self.comboBox.currentIndexChanged.connect(self.mask_size_change)
+        QtCore.QMetaObject.connectSlotsByName(MaskDialog)
+
+        # init combobox
+        self.mask_size_change()
+    def retranslateUi(self, MaskDialog):
+        _translate = QtCore.QCoreApplication.translate
+        MaskDialog.setWindowTitle(_translate("MaskDialog", "Mask"))
+        self.comboBox.setItemText(0, _translate("MaskDialog", "3x3"))
+        self.comboBox.setItemText(1, _translate("MaskDialog", "5x5"))
+        self.comboBox.setItemText(2, _translate("MaskDialog", "7x7"))
+        self.confirmMaskButton.setText(_translate("MaskDialog", "Confirm mask"))
+
+    def confirm_mask(self):
+        self.maskArray = []
+        self.maskLabel = self.textEdit.toPlainText()
+        maskArray = self.maskLabel.split(",")
+
+        mask1d = []
+        for i in range(len(maskArray)):
+            mask1d.append(int(maskArray[i].strip('\n')))
+        maskLen = len(mask1d)
+
+        element = []
+        counter = 0
+        if maskLen == 9:
+            for i in range(3):
+                for j in range(3):
+                    element.append(mask1d[counter])
+                    counter += 1
+                self.maskArray.append(element)
+                element = []
+        elif maskLen == 25:
+            for i in range(5):
+                for j in range(5):
+                    element.append(mask1d[counter])
+                    counter += 1
+                self.maskArray.append(element)
+                element = []
+        elif maskLen == 49:
+            for i in range(7):
+                for j in range(7):
+                    element.append(mask1d[counter])
+                    counter += 1
+                self.maskArray.append(element)
+                element = []
+
+    def mask_size_change(self):
+        mask_index = int(self.comboBox.currentIndex())
+        size = 0
+        if mask_index == 0:
+            size = 3
+        elif mask_index == 1:
+            size = 5
+        elif mask_index == 2:
+            size = 7
+
+        matrix_text = ""
+        for i in range(size):
+            for j in range(size):
+                if i == size-1 and j == size-1:
+                    matrix_text += "1"
+                else:
+                    matrix_text += "1,"
+            matrix_text += "\n"
+        self.textEdit.setText(matrix_text)
 
 
 app = QApplication(sys.argv)
