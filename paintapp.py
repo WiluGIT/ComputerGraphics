@@ -327,9 +327,10 @@ class Window(QMainWindow):
     def plot_histogram(self):
         try:
             img = Image.open(self.path_label.text(), "r")
-            pix_val = list(img.getdata())
-
-            if isinstance(pix_val[0], tuple):
+            image = img.convert("RGB")
+            pix_val = list(image.getdata())
+            coloured = self.check_coloured(pix_val)
+            if coloured:
                 r = []
                 g = []
                 b = []
@@ -360,9 +361,6 @@ class Window(QMainWindow):
                 plt.tight_layout()
                 plt.show()
             else:
-                img = img.convert("RGB")
-                np_img = np.asarray(img)
-                pix_val = list(img.getdata())
                 gray = []
                 for i in range(len(pix_val)):
                     gray.append(pix_val[i][0])
@@ -381,12 +379,219 @@ class Window(QMainWindow):
             msg.exec_()
 
     def equalize_histogram(self):
-        print("2")
-        pass
+        try:
+            img = Image.open(self.path_label.text(), "r")
+            image = img.convert("RGB")
+            pix_val = list(image.getdata())
+            coloured = self.check_coloured(pix_val)
+
+            if not coloured:
+                gray = []
+                for i in range(len(pix_val)):
+                    gray.append(pix_val[i][0])
+                px = self.count_pixels_histogram(gray)
+
+                dist = []
+                val = 0
+                for j in range(len(px)):
+                    val += px[j] / len(pix_val)
+                    dist.append(val)
+
+                gray_lut = self.equ_lut(dist)
+
+                new_grey = []
+                for j in range(len(gray)):
+                    new_val = int(gray_lut[gray[j]])
+                    new_grey.append(new_val)
+
+                result_img = []
+                for i in range(len(new_grey)):
+                    tup = (new_grey[i], new_grey[i], new_grey[i])
+                    result_img.append(tup)
+
+                image = Image.new('RGB', img.size)
+                image.putdata(result_img)
+                image.save("out/equalized.png")
+                self.setPhotoFromPath("out/equalized.png")
+
+                g_px = self.count_pixels_histogram(new_grey)
+                plt.bar(list(g_px.keys()), g_px.values(), color='gray')
+                plt.title('GREYSCALE', size=16, y=1.1)
+                plt.tight_layout()
+                plt.show()
+            else:
+                r = []
+                g = []
+                b = []
+                for i in range(len(pix_val)):
+                    r.append(pix_val[i][0])
+                    g.append(pix_val[i][1])
+                    b.append(pix_val[i][2])
+
+                rpx = self.count_pixels_histogram(r)
+                gpx = self.count_pixels_histogram(g)
+                bpx = self.count_pixels_histogram(b)
+
+                dist_r = []
+                dist_g = []
+                dist_b = []
+                val_r = 0
+                val_g = 0
+                val_b = 0
+                for j in range(len(rpx)):
+                    val_r += rpx[j] / len(pix_val)
+                    val_g += gpx[j] / len(pix_val)
+                    val_b += bpx[j] / len(pix_val)
+
+                    dist_r.append(val_r)
+                    dist_g.append(val_g)
+                    dist_b.append(val_b)
+
+                red_lut = self.equ_lut(dist_r)
+                green_lut = self.equ_lut(dist_g)
+                blue_lut = self.equ_lut(dist_b)
+
+                new_red = []
+                new_green = []
+                new_blue = []
+                for j in range(len(r)):
+                    new_val_r = int(red_lut[r[j]])
+                    new_val_g = int(green_lut[g[j]])
+                    new_val_b = int(blue_lut[b[j]])
+
+                    new_red.append(new_val_r)
+                    new_green.append(new_val_g)
+                    new_blue.append(new_val_b)
+
+                result_img = []
+                for i in range(len(new_red)):
+                    tup = (new_red[i], new_green[i], new_blue[i])
+                    result_img.append(tup)
+
+                image = Image.new('RGB', img.size)
+                image.putdata(result_img)
+                image.save("out/equalized.png")
+                self.setPhotoFromPath("out/equalized.png")
+
+                r_px = self.count_pixels_histogram(new_red)
+                g_px = self.count_pixels_histogram(new_green)
+                b_px = self.count_pixels_histogram(new_blue)
+                plt.subplot(3, 1, 1)
+                plt.title('RED EQUALIZED', size=16, y=1.12)
+                plt.bar(list(r_px.keys()), r_px.values(), color='r')
+
+                plt.subplot(3, 1, 2)
+                plt.title('GREEN EQUALIZED', size=16, y=1.12)
+                plt.bar(list(g_px.keys()), g_px.values(), color='g')
+
+                plt.subplot(3, 1, 3)
+                plt.title('BLUE EQUALIZED', size=16, y=1.12)
+                plt.bar(list(b_px.keys()), b_px.values(), color='b')
+
+                plt.tight_layout()
+                plt.show()
+        except AttributeError:
+            msg = QMessageBox()
+            msg.setIcon(QMessageBox.Information)
+            msg.setText("Select image to create histogram")
+            msg.setWindowTitle("Warning!")
+            msg.setStandardButtons(QMessageBox.Ok | QMessageBox.Cancel)
+
+            msg.exec_()
 
     def stretch_histogram(self):
-        print("3")
-        pass
+        try:
+            img = Image.open(self.path_label.text(), "r")
+            image = img.convert("RGB")
+            pix_val = list(image.getdata())
+            coloured = self.check_coloured(pix_val)
+
+            r = []
+            g = []
+            b = []
+            for i in range(len(pix_val)):
+                r.append(pix_val[i][0])
+                g.append(pix_val[i][1])
+                b.append(pix_val[i][2])
+
+            r_lut = self.calc_lut(r)
+            g_lut = self.calc_lut(g)
+            b_lut = self.calc_lut(b)
+
+            result = []
+            for i in range(len(r_lut)):
+                tup = (r_lut[i], g_lut[i], b_lut[i])
+                result.append(tup)
+
+            image = Image.new('RGB', img.size)
+            image.putdata(result)
+
+            image.save("out/strached.png")
+            self.setPhotoFromPath("out/strached.png")
+
+            if not coloured:
+                gray = []
+                for i in range(len(result)):
+                    gray.append(result[i][0])
+                px = self.count_pixels_histogram_without_zeros(gray)
+                px[0] = 0
+                px[255] = 0
+                plt.bar(list(px.keys()), px.values(), color='gray')
+                plt.title('GREYSCALE STRACHED', size=16, y=1.1)
+                plt.tight_layout()
+                plt.show()
+            else:
+                r = self.count_pixels_histogram_without_zeros(r_lut)
+                r[0] = 0
+                r[255] = 0
+
+                plt.subplot(3, 1, 1)
+                plt.title('RED STRACHED', size=16, y=1.12)
+                plt.bar(list(r.keys()), r.values(), color='r')
+
+                g = self.count_pixels_histogram_without_zeros(g_lut)
+                g[0] = 0
+                g[255] = 0
+                plt.subplot(3, 1, 2)
+                plt.title('GREEN STRACHED', size=16, y=1.12)
+                plt.bar(list(g.keys()), g.values(), color='g')
+
+                b = self.count_pixels_histogram_without_zeros(b_lut)
+                b[0] = 0
+                b[255] = 0
+                plt.subplot(3, 1, 3)
+                plt.title('BLUE STRACHED', size=16, y=1.12)
+                plt.bar(list(b.keys()), b.values(), color='b')
+
+                plt.tight_layout()
+                plt.show()
+        except AttributeError:
+            msg = QMessageBox()
+            msg.setIcon(QMessageBox.Information)
+            msg.setText("Select image to create histogram")
+            msg.setWindowTitle("Warning!")
+            msg.setStandardButtons(QMessageBox.Ok | QMessageBox.Cancel)
+
+            msg.exec_()
+
+    def check_coloured(self, pix_tuple):
+        counter = 0
+        for i in range(len(pix_tuple)):
+            if pix_tuple[i][0] == pix_tuple[i][1] == pix_tuple[i][2]:
+                counter += 1
+
+        if counter == len(pix_tuple):
+            return False
+        return True
+
+    def count_pixels_histogram_without_zeros(self, seq):
+        hist = {}
+        for i in seq:
+            hist[i] = hist.get(i, 0) + 1
+        sort_dic = {}
+        for j in sorted(hist):
+            sort_dic.update({j: hist[j]})
+        return sort_dic
 
     def count_pixels_histogram(self, seq):
         hist = dict([(x, 0) for x in range(256)])
@@ -399,6 +604,30 @@ class Window(QMainWindow):
         for i in range(len(r)):
             hist[i] = (r[i] + g[i] + b[i]) / 3
         return hist
+
+    def calc_lut(self, array):
+        a_range = int(self.histogram_range_a_edit.text())
+        b_range = int(self.histogram_range_b_edit.text())
+        result = []
+        for i in range(len(array)):
+            if array[i] < a_range:
+                newVal = int(((a_range - a_range) / (b_range - a_range)) * 255)
+            elif array[i] > b_range:
+                newVal = int(((b_range - a_range) / (b_range - a_range)) * 255)
+            else:
+                newVal = int(((array[i] - a_range) / (b_range - a_range)) * 255)
+            result.append(newVal)
+
+        return result
+
+    def equ_lut(self, dist):
+        result = []
+        k_size = 256
+        for i in range(k_size):
+            val = (dist[i] - dist[0] / 1 - dist[0]) * (k_size - 1)
+            result.append(val)
+
+        return result
 
     def apply_filter_from_mask(self, mask):
         img = Image.open(self.path_label.text(), "r")
