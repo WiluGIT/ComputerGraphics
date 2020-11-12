@@ -153,8 +153,12 @@ class Window(QMainWindow):
         self.equalize_histogram_button.clicked.connect(self.equalize_histogram)
 
         self.stretch_histogram_button = QPushButton("Stretch histogram", self)
-        self.stretch_histogram_button.setGeometry(750, 570, 100, 30)
+        self.stretch_histogram_button.setGeometry(750, 550, 100, 30)
         self.stretch_histogram_button.clicked.connect(self.stretch_histogram)
+
+        self.apply_threshold_button = QPushButton("Apply threshold", self)
+        self.apply_threshold_button.setGeometry(500, 630, 100, 30)
+        self.apply_threshold_button.clicked.connect(self.apply_threshold)
 
         # labels
         self.photo = QLabel(self)
@@ -246,6 +250,10 @@ class Window(QMainWindow):
         self.histogram_range_label.setGeometry(QtCore.QRect(750, 520, 100, 30))
         self.histogram_range_label.setAlignment(Qt.AlignTop)
 
+        self.threshold_label = QLabel("Threshold:", self)
+        self.threshold_label.setGeometry(QtCore.QRect(400, 580, 80, 30))
+        self.threshold_label.setAlignment(Qt.AlignTop)
+
         #line edit
         self.point_start_x1_edit = QLineEdit(self)
         self.point_start_x1_edit.setGeometry(QRect(1080, 130, 30, 30))
@@ -279,6 +287,10 @@ class Window(QMainWindow):
         self.histogram_range_b_edit.setGeometry(QRect(800, 540, 30, 20))
         self.histogram_range_b_edit.setText("255")
 
+        self.threshold_edit = QLineEdit(self)
+        self.threshold_edit.setGeometry(QRect(400, 600, 30, 20))
+        self.threshold_edit.setText("120")
+
         # select box
         self.size_select_box = QComboBox(self)
         self.size_select_box.setGeometry(1050, 230, 50, 30)
@@ -298,6 +310,12 @@ class Window(QMainWindow):
         self.filter_select_box.addItem("High-pass filter")
         self.filter_select_box.addItem("Gauss filter")
         self.filter_select_box.addItem("Convolution")
+
+        self.threshold_select_box = QComboBox(self)
+        self.threshold_select_box.setGeometry(400, 630, 100, 30)
+        self.threshold_select_box.addItem("Value threshold")
+        self.threshold_select_box.addItem("Percent Black Sel.")
+        self.threshold_select_box.addItem("Mean Iterative Sel.")
         # regex
         y_regex = QtCore.QRegExp("([0-9]|[1-8][0-9]|9[0-9]|[1-3][0-9]{2}|4[0-3][0-9]|440)")  # value between 0 and 440
         y_validator = QRegExpValidator(y_regex)
@@ -320,9 +338,74 @@ class Window(QMainWindow):
         self.histogram_range_b_edit.setValidator(rgb_validator)
         self.histogram_range_a_edit.setValidator(rgb_validator)
 
+        self.threshold_edit.setValidator(rgb_validator)
+
         # sections visibility
         self.setTextCreatorSectionVisibility(False)
         self.setResizerVisabilitySection(False)
+
+    def value_threshold(self):
+        threshold = self.threshold_edit.text()
+        if threshold:
+            img = Image.open("out/greyscale.jpg", "r")
+            threshold = int(threshold)
+            pix_val = list(img.getdata())
+            for i in range(len(pix_val)):
+                if pix_val[i] < threshold:
+                    pix_val[i] = 0
+                elif pix_val[i] >= threshold:
+                    pix_val[i] = 255
+
+            result_img = []
+            for i in range(len(pix_val)):
+                result_img.append(pix_val[i])
+
+            threshold_img = Image.new('L', img.size)
+            threshold_img.putdata(result_img)
+            threshold_img.save("out/value_threshold.jpg")
+            self.setPhotoFromPath("out/value_threshold.jpg")
+        else:
+            msg = QMessageBox()
+            msg.setIcon(QMessageBox.Warning)
+            msg.setText("Enter threshold value!")
+            msg.setWindowTitle("Warning!")
+            msg.setStandardButtons(QMessageBox.Ok)
+            msg.exec_()
+
+    def apply_threshold(self):
+        index = int(self.threshold_select_box.currentIndex())
+        path = self.path_label.text()
+
+        if path:
+            self.turn_grayscale()
+            if index == 0:
+                self.value_threshold()
+            elif index == 1:
+                pass
+            elif index == 2:
+                pass
+        else:
+            msg = QMessageBox()
+            msg.setIcon(QMessageBox.Warning)
+            msg.setText("Load image to apply threshold")
+            msg.setWindowTitle("Warning!")
+            msg.setStandardButtons(QMessageBox.Ok)
+            msg.exec_()
+
+    def turn_grayscale(self):
+        img = Image.open(self.path_label.text(), "r")
+        image = img.convert("RGB")
+        pix_val = list(image.getdata())
+        result_greyscale = []
+        for i in range(len(pix_val)):
+            val = int((pix_val[i][0] + pix_val[i][1] + pix_val[i][2]) / 3)
+            result_greyscale.append(val)
+
+        greyscale_img = Image.new('L', img.size)
+        greyscale_img.putdata(result_greyscale)
+        greyscale_img.save("out/greyscale.jpg")
+        self.setPhotoFromPath("out/greyscale.jpg")
+
 
     def plot_histogram(self):
         try:
@@ -2289,7 +2372,6 @@ class PointDialog(object):
             msg.setWindowTitle("Warning!")
             msg.setStandardButtons(QMessageBox.Ok)
             msg.exec_()
-
 
 
 class MaskDialog(object):
