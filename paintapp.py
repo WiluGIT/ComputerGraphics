@@ -153,7 +153,7 @@ class Window(QMainWindow):
         self.equalize_histogram_button.clicked.connect(self.equalize_histogram)
 
         self.stretch_histogram_button = QPushButton("Stretch histogram", self)
-        self.stretch_histogram_button.setGeometry(750, 550, 100, 30)
+        self.stretch_histogram_button.setGeometry(750, 570, 100, 30)
         self.stretch_histogram_button.clicked.connect(self.stretch_histogram)
 
         self.apply_threshold_button = QPushButton("Apply threshold", self)
@@ -254,6 +254,14 @@ class Window(QMainWindow):
         self.threshold_label.setGeometry(QtCore.QRect(400, 580, 80, 30))
         self.threshold_label.setAlignment(Qt.AlignTop)
 
+        self.threshold_value_label = QLabel("Value:", self)
+        self.threshold_value_label.setGeometry(QtCore.QRect(400, 602, 80, 30))
+        self.threshold_value_label.setAlignment(Qt.AlignTop)
+
+        self.threshold_percentage_label = QLabel("Percent:", self)
+        self.threshold_percentage_label.setGeometry(QtCore.QRect(480, 602, 80, 30))
+        self.threshold_percentage_label.setAlignment(Qt.AlignTop)
+
         #line edit
         self.point_start_x1_edit = QLineEdit(self)
         self.point_start_x1_edit.setGeometry(QRect(1080, 130, 30, 30))
@@ -288,8 +296,12 @@ class Window(QMainWindow):
         self.histogram_range_b_edit.setText("255")
 
         self.threshold_edit = QLineEdit(self)
-        self.threshold_edit.setGeometry(QRect(400, 600, 30, 20))
+        self.threshold_edit.setGeometry(QRect(440, 600, 30, 20))
         self.threshold_edit.setText("120")
+
+        self.percent_select_edit = QLineEdit(self)
+        self.percent_select_edit.setGeometry(QRect(530, 600, 30, 20))
+        self.percent_select_edit.setText("50")
 
         # select box
         self.size_select_box = QComboBox(self)
@@ -326,6 +338,9 @@ class Window(QMainWindow):
         rgb_regex = QtCore.QRegExp("([0-9]|[1-8][0-9]|9[0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])") # value between 0 and 255
         rgb_validator = QRegExpValidator(rgb_regex)
 
+        percent_regex = QtCore.QRegExp("([0-9]|[1-8][0-9]|9[0-9]|100)") # value between 0 and 100
+        percent_validator = QRegExpValidator(percent_regex)
+
         self.point_start_x1_edit.setValidator(x_validator)
         self.point_end_x2_edit.setValidator(x_validator)
 
@@ -339,6 +354,7 @@ class Window(QMainWindow):
         self.histogram_range_a_edit.setValidator(rgb_validator)
 
         self.threshold_edit.setValidator(rgb_validator)
+        self.percent_select_edit.setValidator(percent_validator)
 
         # sections visibility
         self.setTextCreatorSectionVisibility(False)
@@ -372,6 +388,49 @@ class Window(QMainWindow):
             msg.setStandardButtons(QMessageBox.Ok)
             msg.exec_()
 
+    def percent_black(self):
+        percent = self.percent_select_edit.text()
+        if percent:
+            percent = int(percent)/100
+            print(percent)
+            img = Image.open("out/greyscale.jpg", "r")
+            pix_val = list(img.getdata())
+            gray = []
+            for i in range(len(pix_val)):
+                gray.append(pix_val[i])
+            histogram = self.count_pixels_histogram(gray)
+            pixel_count = img.width * img.height
+
+            sum = 0
+            threshold = 0
+            for i in range(256):
+                sum += histogram[i]
+                threshold += 1
+                if sum >= pixel_count * percent:
+                    break
+
+            for i in range(len(pix_val)):
+                if pix_val[i] < threshold:
+                    pix_val[i] = 0
+                elif pix_val[i] >= threshold:
+                    pix_val[i] = 255
+
+            result_img = []
+            for i in range(len(pix_val)):
+                result_img.append(pix_val[i])
+
+            threshold_img = Image.new('L', img.size)
+            threshold_img.putdata(result_img)
+            threshold_img.save("out/pbs_threshold.jpg")
+            self.setPhotoFromPath("out/pbs_threshold.jpg")
+        else:
+            msg = QMessageBox()
+            msg.setIcon(QMessageBox.Warning)
+            msg.setText("Enter percent value!")
+            msg.setWindowTitle("Warning!")
+            msg.setStandardButtons(QMessageBox.Ok)
+            msg.exec_()
+
     def apply_threshold(self):
         index = int(self.threshold_select_box.currentIndex())
         path = self.path_label.text()
@@ -381,7 +440,7 @@ class Window(QMainWindow):
             if index == 0:
                 self.value_threshold()
             elif index == 1:
-                pass
+                self.percent_black()
             elif index == 2:
                 pass
         else:
@@ -404,7 +463,6 @@ class Window(QMainWindow):
         greyscale_img = Image.new('L', img.size)
         greyscale_img.putdata(result_greyscale)
         greyscale_img.save("out/greyscale.jpg")
-        self.setPhotoFromPath("out/greyscale.jpg")
 
 
     def plot_histogram(self):
