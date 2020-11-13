@@ -431,6 +431,75 @@ class Window(QMainWindow):
             msg.setStandardButtons(QMessageBox.Ok)
             msg.exec_()
 
+    def mean_iterative(self):
+        img = Image.open("out/greyscale.jpg", "r")
+        pix_val = list(img.getdata())
+        gray = []
+        for i in range(len(pix_val)):
+            gray.append(pix_val[i])
+        histogram = self.count_pixels_histogram(gray)
+
+        t = [127]
+        k = 1
+        threshold = 0
+        while True:
+            t_end = t[k-1]
+            sum1 = 0
+            sum2 = 0
+            for i in range(t_end):
+                sum1 += i * histogram[i]
+                sum2 += histogram[i]
+            sum2 *= 2
+
+            sum3 = 0
+            sum4 = 0
+            for j in range(t_end + 1, 256):
+                sum3 += j * histogram[j]
+                sum4 += histogram[j]
+            sum4 *= 2
+
+            tk = int((sum1 / sum2) + (sum3 / sum4))
+
+            t.append(tk)
+
+            k += 1
+            tb = []
+            tw = []
+            for i in range(len(pix_val)):
+                if pix_val[i] < tk:
+                    tb.append(pix_val[i])
+                elif pix_val[i] >= tk:
+                    tw.append(pix_val[i])
+
+            tb_sum = 0
+            for i in range(len(tb)):
+                tb_sum += tb[i]
+            tw_sum = 0
+            for i in range(len(tw)):
+                tw_sum += tw[i]
+
+            tb_mean = int((tb_sum / len(tb)))
+            tw_mean = int((tw_sum / len(tw)))
+
+            if (tk == t_end) or (tb_mean == tw_mean):
+                threshold = tk
+                break
+
+        for i in range(len(pix_val)):
+            if pix_val[i] < threshold:
+                pix_val[i] = 0
+            elif pix_val[i] >= threshold:
+                pix_val[i] = 255
+
+        result_img = []
+        for i in range(len(pix_val)):
+            result_img.append(pix_val[i])
+
+        threshold_img = Image.new('L', img.size)
+        threshold_img.putdata(result_img)
+        threshold_img.save("out/mis_threshold.jpg")
+        self.setPhotoFromPath("out/mis_threshold.jpg")
+
     def apply_threshold(self):
         index = int(self.threshold_select_box.currentIndex())
         path = self.path_label.text()
@@ -442,7 +511,7 @@ class Window(QMainWindow):
             elif index == 1:
                 self.percent_black()
             elif index == 2:
-                pass
+                self.mean_iterative()
         else:
             msg = QMessageBox()
             msg.setIcon(QMessageBox.Warning)
