@@ -28,6 +28,7 @@ class ToolSelect(Enum):
     Rectangle = 2
     Ellipse = 3
     Resize = 4
+    Bezier = 5
 
 
 class Window(QMainWindow):
@@ -113,6 +114,11 @@ class Window(QMainWindow):
         self.resize_button.clicked.connect(self.resizeItem)
         self.resize_button.setIcon(QIcon(QPixmap("icons/resize.png")))
         self.buttonGroup.addButton(self.resize_button)
+
+        self.bezier_button = QPushButton(self, "C")
+        self.bezier_button.setGeometry(60, 100, 30, 30)
+        self.bezier_button.clicked.connect(self.bezierCurve)
+        self.buttonGroup.addButton(self.bezier_button)
 
         self.create_shape_button = QPushButton("Create", self)
         self.create_shape_button.setGeometry(1120, 250, 50, 30)
@@ -1339,12 +1345,23 @@ class Window(QMainWindow):
         self.setResizerVisabilitySection(True)
         self.setMovable(True)
 
+    def bezierCurve(self):
+        self.shape_label.setText("Tool: Bezier curve")
+        self.clearButtonsBackground(self.bezier_button)
+        self.selected_tool = ToolSelect.Bezier.value
+        self.graphics_view.scene.clearSelection()
+        self.clearResizer()
+        self.setTextCreatorSectionVisibility(False)
+        self.setResizerVisabilitySection(False)
+        self.setMovable(False)
+
     def clearResizer(self):
         for item in self.graphics_view.scene.items():
             obj_type = type(item)
-            if obj_type == Resizer or obj_type == QGraphicsPixmapItem:
+            if obj_type == Resizer or obj_type == QGraphicsPixmapItem or obj_type == ControlPoint:
                 continue
-            item.resizerVisibilityChange(False)
+            if "resizerVisibilityChange" in dir(item):
+                item.resizerVisibilityChange(False)
 
     def clearButtonsBackground(self, buttonClicked):
         for button in self.buttonGroup.buttons():
@@ -1406,7 +1423,8 @@ class Window(QMainWindow):
         items = self.graphics_view.scene.items()
         if items:
             for item in items:
-                if type(item) is not Resizer:
+                item_type = type(item)
+                if item_type is not Resizer and ("resizerVisibilityChange" in dir(item) or item_type == ControlPoint):
                     if self.selected_tool == ToolSelect.Resize.value:
                         item.setFlag(QGraphicsItem.ItemIsSelectable, moveFlag)
                         item.setFlag(QGraphicsItem.ItemSendsGeometryChanges, moveFlag)
@@ -1437,12 +1455,14 @@ class GraphicsView(QGraphicsView):
     selected_item = None
     graphic_Pen = QPen(Qt.black)
     graphic_Pen.setWidth(1)
+    control_points = []
+    bezier_lines_array = []
+    control_points_array = []
     def __init__(self, parent=None):
         super(GraphicsView, self).__init__(parent)
         self.setup_ui()
 
     def setup_ui(self):
-
         # scene setup
         self.scene = QGraphicsScene(self)
         self.setScene(self.scene)
@@ -1457,17 +1477,47 @@ class GraphicsView(QGraphicsView):
         self.parent().mouse_cords = mouse_cord
         self.parent().mouse_cord_label.setText(
             "(x: {}, y: {})".format(self.parent().mouse_cords.x(), self.parent().mouse_cords.y()))
+
+        selected_item = self.scene.selectedItems()
+        if len(selected_item) == 1 and type(selected_item[0]) == ControlPoint and self.parent().selected_tool == ToolSelect.Select.value:
+            group_id = selected_item[0].getGroupId()
+            if len(self.bezier_lines_array[group_id]) > 0:
+                for line in self.bezier_lines_array[group_id]:
+                    self.scene.removeItem(line)
+
+            group_control_points = self.control_points_array[group_id]
+            selected_point_coord = selected_item[0].sceneBoundingRect()
+            selected_point_id = selected_item[0].getPointId()
+            print(selected_point_id)
+            group_control_points[selected_point_id] = (selected_point_coord.x(), selected_point_coord.y())
+            self.drawCurve(group_control_points, group_id)
+            #self.scene.removeItem(selected_item[0])
+
         super(GraphicsView, self).mouseMoveEvent(event)
 
     def mousePressEvent(self, event):
         mouse_cord = event.pos()
         self.parent().start_point_cords = mouse_cord
+
+        selected_tool = self.parent().selected_tool
+        if selected_tool == ToolSelect.Bezier.value:
+            if event.buttons() & Qt.LeftButton:
+                self.drawControlPointLogic(mouse_cord.x(), mouse_cord.y())
+            elif event.buttons() & Qt.RightButton:
+                if self.control_points:
+                    self.drawCurve(self.control_points)
+                    ControlPoint.curve_group_id += 1
+                    ControlPoint.control_point_ids = 0
+                    self.control_points_array.append(self.control_points)
+                    self.control_points = []
+
         super(GraphicsView, self).mousePressEvent(event)
 
     def mouseReleaseEvent(self, event):
         mouse_cord = event.pos()
         self.parent().end_point_cords = mouse_cord
         self.draw()
+        self.scene.clearSelection()
         super(GraphicsView, self).mouseReleaseEvent(event)
 
     def draw(self):
@@ -1547,6 +1597,13 @@ class GraphicsView(QGraphicsView):
         elif (x1 <= x2) & (y1 >= y2):
             self.scene.addItem(Ellipse(QRectF(x1, y1 - height, width, height), self.scene, self.graphic_Pen))
 
+    def drawControlPointLogic(self, x1=None, y1=None):
+        pen = QPen(Qt.red)
+        pen.setWidth(2)
+        self.scene.addItem(ControlPoint(QRectF(x1 - 3, y1 - 3, 6, 6), self.scene, pen))
+        pos_tuple = (x1, y1)
+        self.control_points.append(pos_tuple)
+
     def drawLineLogic(self):
         x1 = self.parent().start_point_cords.x()
         y1 = self.parent().start_point_cords.y()
@@ -1555,6 +1612,31 @@ class GraphicsView(QGraphicsView):
 
         line = Line(QLineF(x1, y1, x2, y2), self.scene, self.graphic_Pen)
         self.scene.addItem(line)
+
+    def drawCurve(self, controlPoints, group=None):
+        blackPen = QPen(QtCore.Qt.black, 1, QtCore.Qt.DotLine)
+        redPen = QPen(QtCore.Qt.red, 1, QtCore.Qt.DotLine)
+        bluePen = QPen(QtCore.Qt.blue, 1, QtCore.Qt.SolidLine)
+        greenPen = QPen(QtCore.Qt.green, 1, QtCore.Qt.DotLine)
+        redBrush = QBrush(QtCore.Qt.red)
+
+        steps = 1000
+        oldPoint = controlPoints[0]
+        curve_lines = []
+        for i, point in enumerate(controlPoints[1:]):
+            i += 2
+            curve_lines.append(self.scene.addLine(oldPoint[0], oldPoint[1], point[0], point[1], blackPen))
+            oldPoint = point
+
+        oldPoint = controlPoints[0]
+        for point in bezier_curve_range(steps, controlPoints):
+            curve_lines.append(self.scene.addLine(oldPoint[0], oldPoint[1], point[0], point[1], bluePen))
+            oldPoint = point
+
+        if group is not None:
+            self.bezier_lines_array[group] = curve_lines
+        else:
+            self.bezier_lines_array.append(curve_lines)
 
 
 class Line(QGraphicsLineItem):
@@ -1632,6 +1714,30 @@ class Rectangle(QGraphicsRectItem):
         resizerWidth = self.resizer.rect.width() / 2
         resizerOffset = QPointF(resizerWidth, resizerWidth)
         self.resizer.setPos(self.rect().bottomRight() - resizerOffset)
+
+
+class ControlPoint(QGraphicsEllipseItem):
+    control_point_ids = 0
+    curve_group_id = 0
+    def __init__(self, rect=QRectF(), scene=None, pen=QPen(), parent=None):
+        super().__init__(rect, parent)
+        self.setFlag(QGraphicsItem.ItemIsSelectable, False)
+        self.setFlag(QGraphicsItem.ItemIsMovable, False)
+        self.setFlag(QGraphicsItem.ItemIsFocusable, False)
+        self.setFlag(QGraphicsItem.ItemSendsGeometryChanges, True)
+        self.setPen(pen)
+        self.id = ControlPoint.control_point_ids
+        self.group_id = ControlPoint.curve_group_id
+        ControlPoint.control_point_ids += 1
+
+    def getRect(self):
+        return self.rect()
+
+    def getPointId(self):
+        return self.id
+
+    def getGroupId(self):
+        return self.group_id
 
 
 class Ellipse(QGraphicsEllipseItem):
@@ -2600,6 +2706,31 @@ class MaskDialog(object):
                     matrix_text += "1,"
             matrix_text += "\n"
         self.textEdit.setText(matrix_text)
+
+
+def binomial(i, n):
+    return math.factorial(n) / float(
+        math.factorial(i) * math.factorial(n - i))
+
+
+def bernstein(t, i, n):
+    return binomial(i, n) * (t ** i) * ((1 - t) ** (n - i))
+
+
+def bezier(t, points):
+    n = len(points) - 1
+    x = y = 0
+    for i, pos in enumerate(points):
+        bern = bernstein(t, i, n)
+        x += pos[0] * bern
+        y += pos[1] * bern
+    return x, y
+
+
+def bezier_curve_range(n, points):
+    for i in range(n):
+        t = i / float(n - 1)
+        yield bezier(t, points)
 
 
 app = QApplication(sys.argv)
