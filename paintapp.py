@@ -115,9 +115,10 @@ class Window(QMainWindow):
         self.resize_button.setIcon(QIcon(QPixmap("icons/resize.png")))
         self.buttonGroup.addButton(self.resize_button)
 
-        self.bezier_button = QPushButton(self, "C")
+        self.bezier_button = QPushButton(self)
         self.bezier_button.setGeometry(60, 100, 30, 30)
         self.bezier_button.clicked.connect(self.bezierCurve)
+        self.bezier_button.setIcon(QIcon(QPixmap("icons/curve.png")))
         self.buttonGroup.addButton(self.bezier_button)
 
         self.create_shape_button = QPushButton("Create", self)
@@ -398,7 +399,6 @@ class Window(QMainWindow):
         percent = self.percent_select_edit.text()
         if percent:
             percent = int(percent)/100
-            print(percent)
             img = Image.open("out/greyscale.jpg", "r")
             pix_val = list(img.getdata())
             gray = []
@@ -1488,10 +1488,8 @@ class GraphicsView(QGraphicsView):
             group_control_points = self.control_points_array[group_id]
             selected_point_coord = selected_item[0].sceneBoundingRect()
             selected_point_id = selected_item[0].getPointId()
-            print(selected_point_id)
             group_control_points[selected_point_id] = (selected_point_coord.x(), selected_point_coord.y())
             self.drawCurve(group_control_points, group_id)
-            #self.scene.removeItem(selected_item[0])
 
         super(GraphicsView, self).mouseMoveEvent(event)
 
