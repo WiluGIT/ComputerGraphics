@@ -1776,70 +1776,6 @@ class ControlPoint(QGraphicsEllipseItem):
         return self.group_id
 
 
-class Polygon(QGraphicsPolygonItem):
-    def __init__(self, polygon=QPolygon(), scene=None, pen=QPen(), parent=None):
-        super().__init__(polygon, parent)
-        self.setFlag(QGraphicsItem.ItemIsSelectable, False)
-        self.setFlag(QGraphicsItem.ItemIsMovable, False)
-        self.setFlag(QGraphicsItem.ItemIsFocusable, False)
-        self.setFlag(QGraphicsItem.ItemSendsGeometryChanges, False)
-        self.setPen(pen)
-
-        self.resizer = Resizer(parent=self)
-        self.origin_rect = self.polygon().boundingRect()
-        print(self.origin_rect)
-        transform = QTransform()
-
-        center = self.origin_rect.center()
-        transform.translate(center.x(), center.y())
-        #transform.rotate(90)
-        transform.scale(1.5, 1)
-        transform.translate(-center.x(), -center.y())
-        newPolygon = transform.map(self.polygon())
-        print(newPolygon)
-        self.setPolygon(newPolygon)
-
-        #self.setPolygon(self.polygon().translated(-40,-100))
-        resizerWidth = self.resizer.rect.width() / 2
-        resizerOffset = QPointF(resizerWidth, resizerWidth)
-        self.resizer.setPos(self.origin_rect.bottomRight() - resizerOffset)
-        self.resizer.setVisible(False)
-        self.resizer.resizeSignal.connect(self.resizeRec)
-
-    @QtCore.Slot(QGraphicsObject)
-    def resizeRec(self, change):
-        rect = self.polygon().boundingRect()
-        center = self.origin_rect.center()
-        newW = rect.width() + change.x()
-        newH = rect.height() + change.y()
-        sx = newW / rect.width()
-        sy = newH / rect.height()
-        transform = QTransform()
-        transform.translate(center.x(), center.y())
-        transform.scale(sx, sy)
-        transform.translate(-center.x(), -center.y())
-
-        newPolygon = transform.map(self.polygon())
-        self.setPolygon(newPolygon)
-        self.prepareGeometryChange()
-        self.update()
-
-    def resizerVisibilityChange(self, visibleFlag):
-        self.resizer.setVisible(visibleFlag)
-
-    def populateTextCreator(self, graphicView):
-        graphicView.parent().width_edit.setText(str(int(self.polygon().boundingRect().width())))
-        graphicView.parent().height_edit.setText(str(int(self.polygon().boundingRect().height())))
-
-    # def resizeRectText(self, width, height):
-    #     rect = self.rect()
-    #     rect.setWidth(width)
-    #     rect.setHeight(height)
-    #     self.setRect(rect)
-    #     resizerWidth = self.resizer.rect.width() / 2
-    #     resizerOffset = QPointF(resizerWidth, resizerWidth)
-    #     self.resizer.setPos(self.rect().bottomRight() - resizerOffset)
-
 class Ellipse(QGraphicsEllipseItem):
     def __init__(self, rect=QRectF(), scene=None, pen=QPen(), parent=None):
         super().__init__(rect, parent)
@@ -1880,6 +1816,137 @@ class Ellipse(QGraphicsEllipseItem):
         self.resizer.setPos(self.rect().bottomRight() - resizerOffset)
 
 
+class DraggableGraphicsItemSignaller(QGraphicsObject):
+
+    positionChanged = QtCore.Signal(QPointF)
+
+    def __init__(self, rect=QRectF(0, 0, 10, 10), parent=None):
+        super().__init__(parent)
+        self.setFlag(QGraphicsItem.ItemIsMovable, True)
+        self.setFlag(QGraphicsItem.ItemIsSelectable, True)
+        self.setFlag(QGraphicsItem.ItemSendsGeometryChanges, True)
+        self.rect = rect
+
+    def boundingRect(self):
+        return self.rect
+
+    def paint(self, painter, option, widget=None):
+        if self.isSelected():
+            painter.setRenderHint(QPainter.Antialiasing)
+            painter.setBrush(QBrush(QColor(255, 0, 0, 255)))
+            painter.setPen(QPen(QColor(0, 0, 0, 255), 1.0, Qt.SolidLine, Qt.RoundCap, Qt.RoundJoin))
+        painter.drawEllipse(self.rect)
+
+def make_GraphicsItem_draggable(parent):
+
+    class DraggableGraphicsItem(parent):
+
+        def __init__(self, *args, **kwargs):
+            """
+            By default QGraphicsItems are not movable and also do not emit signals when the position is changed for
+            performance reasons. We need to turn this on.
+            """
+            parent.__init__(self, *args, **kwargs)
+            self.parent = parent
+            self.setFlags(QGraphicsItem.ItemIsMovable | QGraphicsItem.ItemSendsScenePositionChanges)
+            self.signaller = DraggableGraphicsItemSignaller()
+
+        def itemChange(self, change, value):
+            if change == QGraphicsItem.ItemPositionChange:
+                self.signaller.positionChanged.emit(value)
+
+            return parent.itemChange(self, change, value)
+
+    return DraggableGraphicsItem
+
+
+class Polygon(QGraphicsPolygonItem):
+    def __init__(self, polygon=QPolygon(), scene=None, pen=QPen(), parent=None):
+        super().__init__(polygon, parent)
+        self.setFlag(QGraphicsItem.ItemIsSelectable, False)
+        self.setFlag(QGraphicsItem.ItemIsMovable, False)
+        self.setFlag(QGraphicsItem.ItemIsFocusable, False)
+        self.setFlag(QGraphicsItem.ItemSendsGeometryChanges, False)
+        self.setPen(pen)
+
+        self.resizer = Resizer(parent=self)
+        self.origin_rect = self.polygon().boundingRect()
+        self.setTransformOriginPoint(self.origin_rect.center().x(), self.origin_rect.center().y())
+        resizerWidth = self.resizer.rect.width() / 2
+        self.resizerOffset = QPointF(resizerWidth, resizerWidth)
+        self.resizer.setPos(self.origin_rect.bottomRight() - self.resizerOffset)
+        self.resizer.setVisible(False)
+        self.resizer.resizeSignal.connect(self.resizeRec)
+
+        self.rotator = Rotator(parent=self)
+        self.rotator.setPos(self.origin_rect.topLeft() - self.resizerOffset)
+        self.rotator.setVisible(True)
+        self.rotator.rotatorSignal.connect(self.rotateRec)
+
+
+    @QtCore.Slot(QGraphicsObject)
+    def resizeRec(self, change):
+        try:
+            rect = self.polygon().boundingRect()
+            center = self.origin_rect.center()
+            newW = rect.width() + change.x()
+            newH = rect.height() + change.y()
+            sx = newW / rect.width()
+            sy = newH / rect.height()
+            transform = QTransform()
+            transform.translate(center.x(), center.y())
+            transform.scale(sx, sy)
+            transform.translate(-center.x(), -center.y())
+
+            newPolygon = transform.map(self.polygon())
+            self.setPolygon(newPolygon)
+            self.prepareGeometryChange()
+            self.update()
+        except ZeroDivisionError:
+            pass
+
+    @QtCore.Slot(QGraphicsObject)
+    def rotateRec(self, position):
+        try:
+            center = self.transformOriginPoint()
+            angle = math.atan2(center.y() - position.y(), center.x() - position.x()) / math.pi * 180
+            print(position)
+            self.setRotation(angle)
+            # transform = QTransform()
+            # transform.translate(center.x(), center.y())
+            # transform.rotate(angle)
+            # transform.translate(-center.x(), -center.y())
+            #
+            # newPolygon = transform.map(self.polygon())
+            # self.setPolygon(newPolygon)
+            # self.prepareGeometryChange()
+            # self.update()
+        except ZeroDivisionError:
+            pass
+
+    def rotate_item(self, position):
+        item_position = self.transformOriginPoint()
+        angle = math.atan2(item_position.y() - position.y(),
+                           item_position.x() - position.x()) / math.pi * 180
+        self.setRotation(angle)
+
+    def resizerVisibilityChange(self, visibleFlag):
+        self.resizer.setVisible(visibleFlag)
+
+    def populateTextCreator(self, graphicView):
+        graphicView.parent().width_edit.setText(str(int(self.polygon().boundingRect().width())))
+        graphicView.parent().height_edit.setText(str(int(self.polygon().boundingRect().height())))
+
+    # def resizeRectText(self, width, height):
+    #     rect = self.rect()
+    #     rect.setWidth(width)
+    #     rect.setHeight(height)
+    #     self.setRect(rect)
+    #     resizerWidth = self.resizer.rect.width() / 2
+    #     resizerOffset = QPointF(resizerWidth, resizerWidth)
+    #     self.resizer.setPos(self.rect().bottomRight() - resizerOffset)
+
+
 class Resizer(QGraphicsObject):
     resizeSignal = QtCore.Signal(QPointF)
 
@@ -1905,6 +1972,34 @@ class Resizer(QGraphicsObject):
             if self.isSelected():
                 self.resizeSignal.emit(value - self.pos())
         return value
+
+
+class Rotator(QGraphicsObject):
+    rotatorSignal = QtCore.Signal(QPointF)
+
+    def __init__(self, rect=QRectF(0, 0, 10, 10), parent=None):
+        super().__init__(parent)
+        self.setFlag(QGraphicsItem.ItemIsMovable, True)
+        self.setFlag(QGraphicsItem.ItemIsSelectable, True)
+        self.setFlag(QGraphicsItem.ItemSendsGeometryChanges, True)
+        self.rect = rect
+
+    def boundingRect(self):
+        return self.rect
+
+    def paint(self, painter, option, widget=None):
+        if self.isSelected():
+            painter.setRenderHint(QPainter.Antialiasing)
+            painter.setBrush(QBrush(QColor(0, 0, 255, 255)))
+            painter.setPen(QPen(QColor(0, 0, 0, 255), 1.0, Qt.SolidLine, Qt.RoundCap, Qt.RoundJoin))
+        painter.drawRect(self.rect)
+
+    def itemChange(self, change, value):
+        if change == QGraphicsItem.ItemPositionChange:
+            if self.isSelected():
+                self.rotatorSignal.emit(value)
+        return value
+
 
 class Ui_Dialog(QDialog):
     def setupUi(self, Dialog):
@@ -1947,6 +2042,7 @@ class Ui_Dialog(QDialog):
 
     def getValue(self):
         return self.value
+
 
 class Color_Dialog(object):
     def setupUi(self, Dialog):
