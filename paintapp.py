@@ -12,8 +12,10 @@ from PySide2.QtOpenGL import QGLWidget
 from PySide2.QtWidgets import QApplication, QMainWindow, QGraphicsScene, QPushButton, \
     QGraphicsView, QGraphicsItem, QLabel, QGraphicsLineItem, QGraphicsRectItem, QGraphicsEllipseItem, QGraphicsObject, \
     QButtonGroup, QLineEdit, QLayout, QMessageBox, QComboBox, QStyle, QMenuBar, QMenu, QAction, QStatusBar, QFileDialog, \
-    QGraphicsPixmapItem, QDialogButtonBox, QSlider, QDialog, QSpinBox, QAbstractSlider, QVBoxLayout, QWidget, QTextEdit
-from PySide2.QtGui import QBrush, QPen, QFont, QPainter, QColor, QRegExpValidator, QIcon, QPixmap, QImage
+    QGraphicsPixmapItem, QDialogButtonBox, QSlider, QDialog, QSpinBox, QAbstractSlider, QVBoxLayout, QWidget, QTextEdit, \
+    QGraphicsPolygonItem
+from PySide2.QtGui import QBrush, QPen, QFont, QPainter, QColor, QRegExpValidator, QIcon, QPixmap, QImage, QPolygonF, \
+    QPolygon, QTransform
 from PySide2.QtCore import Qt, QRect, QPoint, Signal, QPointF, QRectF, Slot, QLineF, QSize
 from PySide2 import QtCore, QtOpenGL
 import sys
@@ -29,7 +31,7 @@ class ToolSelect(Enum):
     Ellipse = 3
     Resize = 4
     Bezier = 5
-
+    Polygon = 6
 
 class Window(QMainWindow):
     # consts
@@ -120,6 +122,12 @@ class Window(QMainWindow):
         self.bezier_button.clicked.connect(self.bezierCurve)
         self.bezier_button.setIcon(QIcon(QPixmap("icons/curve.png")))
         self.buttonGroup.addButton(self.bezier_button)
+
+        self.polygon_button = QPushButton(self)
+        self.polygon_button.setGeometry(100, 100, 30, 30)
+        self.polygon_button.clicked.connect(self.drawPolygon)
+        self.polygon_button.setIcon(QIcon(QPixmap("icons/polygon.png")))
+        self.buttonGroup.addButton(self.polygon_button)
 
         self.create_shape_button = QPushButton("Create", self)
         self.create_shape_button.setGeometry(1120, 250, 50, 30)
@@ -1325,6 +1333,16 @@ class Window(QMainWindow):
         self.setResizerVisabilitySection(False)
         self.setMovable(False)
 
+    def drawPolygon(self):
+        self.shape_label.setText("Tool: Polygon")
+        self.clearButtonsBackground(self.polygon_button)
+        self.selected_tool = ToolSelect.Polygon.value
+        self.graphics_view.scene.clearSelection()
+        self.clearResizer()
+        self.setTextCreatorSectionVisibility(False)
+        self.setResizerVisabilitySection(False)
+        self.setMovable(False)
+
     def selectItem(self):
         self.shape_label.setText("Tool: Select")
         self.clearButtonsBackground(self.select_button)
@@ -1458,6 +1476,7 @@ class GraphicsView(QGraphicsView):
     control_points = []
     bezier_lines_array = []
     control_points_array = []
+    qpoint_array = []
     def __init__(self, parent=None):
         super(GraphicsView, self).__init__(parent)
         self.setup_ui()
@@ -1508,6 +1527,15 @@ class GraphicsView(QGraphicsView):
                     ControlPoint.control_point_ids = 0
                     self.control_points_array.append(self.control_points)
                     self.control_points = []
+        elif selected_tool == ToolSelect.Polygon.value:
+            if event.buttons() & Qt.LeftButton:
+                self.drawControlPointLogic(mouse_cord.x(), mouse_cord.y())
+                self.qpoint_array.append(QPoint(mouse_cord.x(), mouse_cord.y()))
+            elif event.buttons() & Qt.RightButton:
+                if self.control_points:
+                    self.clearAllControlPoints()
+                    self.drawPolygonLogic(self.qpoint_array)
+                    self.qpoint_array = []
 
         super(GraphicsView, self).mousePressEvent(event)
 
@@ -1534,6 +1562,12 @@ class GraphicsView(QGraphicsView):
             else:
                 pass
 
+    def clearAllControlPoints(self):
+        items = self.scene.items()
+        for item in items:
+            if type(item) == ControlPoint:
+                self.scene.removeItem(item)
+
     def selectionChanged(self):
         selectedItems = self.scene.selectedItems()
         selected_tool = self.parent().selected_tool
@@ -1543,7 +1577,7 @@ class GraphicsView(QGraphicsView):
             if obj_type is not Resizer:
                 self.setLineLengthControl(False)
 
-            if (obj_type == Rectangle) | (obj_type == Line) | (obj_type == Ellipse):
+            if (obj_type == Rectangle) | (obj_type == Line) | (obj_type == Ellipse) | (obj_type == Polygon):
                 self.selected_item = selectedItems[0]
                 self.selected_item.resizerVisibilityChange(True)
                 self.selected_item.populateTextCreator(self)
@@ -1576,6 +1610,10 @@ class GraphicsView(QGraphicsView):
             self.scene.addItem(Rectangle(QRectF(x2, y2, width, height), self.scene, self.graphic_Pen))
         elif (x1 <= x2) & (y1 >= y2):
             self.scene.addItem(Rectangle(QRectF(x1, y1 - height, width, height), self.scene, self.graphic_Pen))
+
+    def drawPolygonLogic(self, points):
+        polygon = QPolygon(points)
+        self.scene.addItem(Polygon(polygon, self.scene, self.graphic_Pen))
 
     def drawEllipseLogic(self, x1=None, y1=None, x2=None, y2=None):
         if (x1 is None) | (y1 is None) | (x2 is None) | (y2 is None):
@@ -1737,6 +1775,70 @@ class ControlPoint(QGraphicsEllipseItem):
     def getGroupId(self):
         return self.group_id
 
+
+class Polygon(QGraphicsPolygonItem):
+    def __init__(self, polygon=QPolygon(), scene=None, pen=QPen(), parent=None):
+        super().__init__(polygon, parent)
+        self.setFlag(QGraphicsItem.ItemIsSelectable, False)
+        self.setFlag(QGraphicsItem.ItemIsMovable, False)
+        self.setFlag(QGraphicsItem.ItemIsFocusable, False)
+        self.setFlag(QGraphicsItem.ItemSendsGeometryChanges, False)
+        self.setPen(pen)
+
+        self.resizer = Resizer(parent=self)
+        self.origin_rect = self.polygon().boundingRect()
+        print(self.origin_rect)
+        transform = QTransform()
+
+        center = self.origin_rect.center()
+        transform.translate(center.x(), center.y())
+        #transform.rotate(90)
+        transform.scale(1.5, 1)
+        transform.translate(-center.x(), -center.y())
+        newPolygon = transform.map(self.polygon())
+        print(newPolygon)
+        self.setPolygon(newPolygon)
+
+        #self.setPolygon(self.polygon().translated(-40,-100))
+        resizerWidth = self.resizer.rect.width() / 2
+        resizerOffset = QPointF(resizerWidth, resizerWidth)
+        self.resizer.setPos(self.origin_rect.bottomRight() - resizerOffset)
+        self.resizer.setVisible(False)
+        self.resizer.resizeSignal.connect(self.resizeRec)
+
+    @QtCore.Slot(QGraphicsObject)
+    def resizeRec(self, change):
+        rect = self.polygon().boundingRect()
+        center = self.origin_rect.center()
+        newW = rect.width() + change.x()
+        newH = rect.height() + change.y()
+        sx = newW / rect.width()
+        sy = newH / rect.height()
+        transform = QTransform()
+        transform.translate(center.x(), center.y())
+        transform.scale(sx, sy)
+        transform.translate(-center.x(), -center.y())
+
+        newPolygon = transform.map(self.polygon())
+        self.setPolygon(newPolygon)
+        self.prepareGeometryChange()
+        self.update()
+
+    def resizerVisibilityChange(self, visibleFlag):
+        self.resizer.setVisible(visibleFlag)
+
+    def populateTextCreator(self, graphicView):
+        graphicView.parent().width_edit.setText(str(int(self.polygon().boundingRect().width())))
+        graphicView.parent().height_edit.setText(str(int(self.polygon().boundingRect().height())))
+
+    # def resizeRectText(self, width, height):
+    #     rect = self.rect()
+    #     rect.setWidth(width)
+    #     rect.setHeight(height)
+    #     self.setRect(rect)
+    #     resizerWidth = self.resizer.rect.width() / 2
+    #     resizerOffset = QPointF(resizerWidth, resizerWidth)
+    #     self.resizer.setPos(self.rect().bottomRight() - resizerOffset)
 
 class Ellipse(QGraphicsEllipseItem):
     def __init__(self, rect=QRectF(), scene=None, pen=QPen(), parent=None):
