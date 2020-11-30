@@ -1,3 +1,4 @@
+import importlib
 import math
 import operator
 import os
@@ -13,9 +14,9 @@ from PySide2.QtWidgets import QApplication, QMainWindow, QGraphicsScene, QPushBu
     QGraphicsView, QGraphicsItem, QLabel, QGraphicsLineItem, QGraphicsRectItem, QGraphicsEllipseItem, QGraphicsObject, \
     QButtonGroup, QLineEdit, QLayout, QMessageBox, QComboBox, QStyle, QMenuBar, QMenu, QAction, QStatusBar, QFileDialog, \
     QGraphicsPixmapItem, QDialogButtonBox, QSlider, QDialog, QSpinBox, QAbstractSlider, QVBoxLayout, QWidget, QTextEdit, \
-    QGraphicsPolygonItem
+    QGraphicsPolygonItem, QGraphicsPathItem, QAbstractGraphicsShapeItem
 from PySide2.QtGui import QBrush, QPen, QFont, QPainter, QColor, QRegExpValidator, QIcon, QPixmap, QImage, QPolygonF, \
-    QPolygon, QTransform
+    QPolygon, QTransform, QPainterPath
 from PySide2.QtCore import Qt, QRect, QPoint, Signal, QPointF, QRectF, Slot, QLineF, QSize
 from PySide2 import QtCore, QtOpenGL
 import sys
@@ -420,7 +421,7 @@ class Window(QMainWindow):
         except ValueError:
             msg = QMessageBox()
             msg.setIcon(QMessageBox.Information)
-            msg.setText("Width/Height can't be empty")
+            msg.setText("Angle can't be empty")
             msg.setWindowTitle("Warning!")
             msg.setStandardButtons(QMessageBox.Ok)
             msg.exec_()
@@ -432,7 +433,7 @@ class Window(QMainWindow):
         except ValueError:
             msg = QMessageBox()
             msg.setIcon(QMessageBox.Information)
-            msg.setText("Width/Height can't be empty")
+            msg.setText("Scale can't be empty")
             msg.setWindowTitle("Warning!")
             msg.setStandardButtons(QMessageBox.Ok)
             msg.exec_()
