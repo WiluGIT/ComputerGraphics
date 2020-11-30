@@ -32,6 +32,7 @@ class ToolSelect(Enum):
     Resize = 4
     Bezier = 5
     Polygon = 6
+    Rotate = 7
 
 class Window(QMainWindow):
     # consts
@@ -86,6 +87,7 @@ class Window(QMainWindow):
         self.buttonGroup = QButtonGroup()
         self.text_creator_section = []
         self.resizer_text_section = []
+        self.text_rotator_section = []
         # buttons
         self.select_button = QPushButton(self)
         self.select_button.setGeometry(20, 50, 30, 30)
@@ -128,6 +130,12 @@ class Window(QMainWindow):
         self.polygon_button.clicked.connect(self.drawPolygon)
         self.polygon_button.setIcon(QIcon(QPixmap("icons/polygon.png")))
         self.buttonGroup.addButton(self.polygon_button)
+
+        self.rotate_button = QPushButton(self)
+        self.rotate_button.setGeometry(140, 100, 30, 30)
+        self.rotate_button.clicked.connect(self.selectRotation)
+        self.rotate_button.setIcon(QIcon(QPixmap("icons/polygon.png")))
+        self.buttonGroup.addButton(self.rotate_button)
 
         self.create_shape_button = QPushButton("Create", self)
         self.create_shape_button.setGeometry(1120, 250, 50, 30)
@@ -174,6 +182,16 @@ class Window(QMainWindow):
         self.apply_threshold_button = QPushButton("Apply threshold", self)
         self.apply_threshold_button.setGeometry(500, 630, 100, 30)
         self.apply_threshold_button.clicked.connect(self.apply_threshold)
+
+        self.apply_transform_button = QPushButton("Transform", self)
+        self.apply_transform_button.setGeometry(1120, 130, 100, 30)
+        self.apply_transform_button.clicked.connect(self.apply_transform)
+        self.text_rotator_section.append(self.apply_transform_button)
+
+        self.apply_scale = QPushButton("Transform", self)
+        self.apply_scale.setGeometry(1120, 220, 100, 30)
+        self.apply_scale.clicked.connect(self.apply_scale_transform)
+        self.resizer_text_section.append(self.apply_scale)
 
         # labels
         self.photo = QLabel(self)
@@ -277,6 +295,16 @@ class Window(QMainWindow):
         self.threshold_percentage_label.setGeometry(QtCore.QRect(480, 602, 80, 30))
         self.threshold_percentage_label.setAlignment(Qt.AlignTop)
 
+        self.rotate_label = QLabel(self)
+        self.rotate_label.setGeometry(QRect(1050, 70, 200, 30))
+        self.rotate_label.setText("Angle:")
+        self.text_rotator_section.append(self.rotate_label)
+
+        self.scale_label = QLabel(self)
+        self.scale_label.setGeometry(QRect(1050, 160, 200, 30))
+        self.scale_label.setText("Scale:")
+        self.resizer_text_section.append(self.scale_label)
+
         #line edit
         self.point_start_x1_edit = QLineEdit(self)
         self.point_start_x1_edit.setGeometry(QRect(1080, 130, 30, 30))
@@ -317,6 +345,15 @@ class Window(QMainWindow):
         self.percent_select_edit = QLineEdit(self)
         self.percent_select_edit.setGeometry(QRect(530, 600, 30, 20))
         self.percent_select_edit.setText("50")
+
+        self.rotate_edit = QLineEdit(self)
+        self.rotate_edit.setGeometry(QRect(1080, 100, 30, 30))
+        self.text_rotator_section.append(self.rotate_edit)
+
+        self.scale_edit = QLineEdit(self)
+        self.scale_edit.setGeometry(QRect(1080, 190, 30, 30))
+        self.resizer_text_section.append(self.scale_edit)
+
 
         # select box
         self.size_select_box = QComboBox(self)
@@ -374,6 +411,31 @@ class Window(QMainWindow):
         # sections visibility
         self.setTextCreatorSectionVisibility(False)
         self.setResizerVisabilitySection(False)
+        self.setTextRotatorSectionVisibility(False)
+
+    def apply_transform(self):
+        try:
+            if type(self.graphics_view.selected_item) == Polygon:
+                self.graphics_view.selected_item.rotatePolygonText(int(self.rotate_edit.text()))
+        except ValueError:
+            msg = QMessageBox()
+            msg.setIcon(QMessageBox.Information)
+            msg.setText("Width/Height can't be empty")
+            msg.setWindowTitle("Warning!")
+            msg.setStandardButtons(QMessageBox.Ok)
+            msg.exec_()
+
+    def apply_scale_transform(self):
+        try:
+            if type(self.graphics_view.selected_item) == Polygon:
+                self.graphics_view.selected_item.scalePolygonText(float(self.scale_edit.text()))
+        except ValueError:
+            msg = QMessageBox()
+            msg.setIcon(QMessageBox.Information)
+            msg.setText("Width/Height can't be empty")
+            msg.setWindowTitle("Warning!")
+            msg.setStandardButtons(QMessageBox.Ok)
+            msg.exec_()
 
     def value_threshold(self):
         threshold = self.threshold_edit.text()
@@ -1309,8 +1371,10 @@ class Window(QMainWindow):
         self.selected_tool = ToolSelect.Line.value
         self.graphics_view.scene.clearSelection()
         self.clearResizer()
+        self.clearRotator()
         self.setTextCreatorSectionVisibility(True)
         self.setResizerVisabilitySection(False)
+        self.setTextRotatorSectionVisibility(False)
         self.setMovable(False)
 
     def drawRect(self):
@@ -1319,8 +1383,10 @@ class Window(QMainWindow):
         self.selected_tool = ToolSelect.Rectangle.value
         self.graphics_view.scene.clearSelection()
         self.clearResizer()
+        self.clearRotator()
         self.setTextCreatorSectionVisibility(True)
         self.setResizerVisabilitySection(False)
+        self.setTextRotatorSectionVisibility(False)
         self.setMovable(False)
 
     def drawEllipse(self):
@@ -1329,8 +1395,10 @@ class Window(QMainWindow):
         self.selected_tool = ToolSelect.Ellipse.value
         self.graphics_view.scene.clearSelection()
         self.clearResizer()
+        self.clearRotator()
         self.setTextCreatorSectionVisibility(True)
         self.setResizerVisabilitySection(False)
+        self.setTextRotatorSectionVisibility(False)
         self.setMovable(False)
 
     def drawPolygon(self):
@@ -1339,8 +1407,10 @@ class Window(QMainWindow):
         self.selected_tool = ToolSelect.Polygon.value
         self.graphics_view.scene.clearSelection()
         self.clearResizer()
+        self.clearRotator()
         self.setTextCreatorSectionVisibility(False)
         self.setResizerVisabilitySection(False)
+        self.setTextRotatorSectionVisibility(False)
         self.setMovable(False)
 
     def selectItem(self):
@@ -1349,8 +1419,10 @@ class Window(QMainWindow):
         self.selected_tool = ToolSelect.Select.value
         self.graphics_view.scene.clearSelection()
         self.clearResizer()
+        self.clearRotator()
         self.setTextCreatorSectionVisibility(False)
         self.setResizerVisabilitySection(False)
+        self.setTextRotatorSectionVisibility(False)
         self.setMovable(True)
 
     def resizeItem(self):
@@ -1359,8 +1431,21 @@ class Window(QMainWindow):
         self.selected_tool = ToolSelect.Resize.value
         self.graphics_view.scene.clearSelection()
         self.clearResizer()
+        self.clearRotator()
         self.setTextCreatorSectionVisibility(False)
         self.setResizerVisabilitySection(True)
+        self.setTextRotatorSectionVisibility(False)
+        self.setMovable(True)
+
+    def selectRotation(self):
+        self.shape_label.setText("Tool: Rotate")
+        self.clearButtonsBackground(self.rotate_button)
+        self.selected_tool = ToolSelect.Rotate.value
+        self.graphics_view.scene.clearSelection()
+        self.clearResizer()
+        self.setTextCreatorSectionVisibility(False)
+        self.setResizerVisabilitySection(False)
+        self.setTextRotatorSectionVisibility(True)
         self.setMovable(True)
 
     def bezierCurve(self):
@@ -1369,8 +1454,10 @@ class Window(QMainWindow):
         self.selected_tool = ToolSelect.Bezier.value
         self.graphics_view.scene.clearSelection()
         self.clearResizer()
+        self.clearRotator()
         self.setTextCreatorSectionVisibility(False)
         self.setResizerVisabilitySection(False)
+        self.setTextRotatorSectionVisibility(False)
         self.setMovable(False)
 
     def clearResizer(self):
@@ -1380,6 +1467,14 @@ class Window(QMainWindow):
                 continue
             if "resizerVisibilityChange" in dir(item):
                 item.resizerVisibilityChange(False)
+
+    def clearRotator(self):
+        for item in self.graphics_view.scene.items():
+            obj_type = type(item)
+            if obj_type == Resizer or obj_type == QGraphicsPixmapItem or obj_type == ControlPoint:
+                continue
+            if "rotatorVisibilityChange" in dir(item):
+                item.rotatorVisibilityChange(False)
 
     def clearButtonsBackground(self, buttonClicked):
         for button in self.buttonGroup.buttons():
@@ -1431,6 +1526,10 @@ class Window(QMainWindow):
 
     def setTextCreatorSectionVisibility(self, visible_flag):
         for item in self.text_creator_section:
+            item.setVisible(visible_flag)
+
+    def setTextRotatorSectionVisibility(self, visible_flag):
+        for item in self.text_rotator_section:
             item.setVisible(visible_flag)
 
     def setResizerVisabilitySection(self, visible_flag):
@@ -1532,10 +1631,11 @@ class GraphicsView(QGraphicsView):
                 self.drawControlPointLogic(mouse_cord.x(), mouse_cord.y())
                 self.qpoint_array.append(QPoint(mouse_cord.x(), mouse_cord.y()))
             elif event.buttons() & Qt.RightButton:
-                if self.control_points:
+                if self.qpoint_array:
                     self.clearAllControlPoints()
                     self.drawPolygonLogic(self.qpoint_array)
                     self.qpoint_array = []
+                    self.control_points = []
 
         super(GraphicsView, self).mousePressEvent(event)
 
@@ -1584,14 +1684,20 @@ class GraphicsView(QGraphicsView):
 
                 if obj_type == Line:
                     self.setLineLengthControl(True)
+        elif (len(selectedItems) == 1) & (selected_tool == ToolSelect.Rotate.value):
+            obj_type = type(selectedItems[0])
+            if obj_type == Polygon:
+                self.selected_item = selectedItems[0]
+                self.selected_item.rotatorVisibilityChange(True)
+                self.selected_item.populateTextCreator(self)
 
     def setLineLengthControl(self, setFlag):
         if setFlag:
             self.parent().height_edit.setDisabled(True)
-            self.parent().width_label.setText("Długość:")
+            self.parent().width_label.setText("Height:")
         else:
             self.parent().height_edit.setDisabled(False)
-            self.parent().width_label.setText("Szerokość:")
+            self.parent().width_label.setText("Width:")
 
     def drawRectangleLogic(self, x1=None, y1=None, x2=None, y2=None):
         if (x1 is None) | (y1 is None) | (x2 is None) | (y2 is None):
@@ -1816,50 +1922,6 @@ class Ellipse(QGraphicsEllipseItem):
         self.resizer.setPos(self.rect().bottomRight() - resizerOffset)
 
 
-class DraggableGraphicsItemSignaller(QGraphicsObject):
-
-    positionChanged = QtCore.Signal(QPointF)
-
-    def __init__(self, rect=QRectF(0, 0, 10, 10), parent=None):
-        super().__init__(parent)
-        self.setFlag(QGraphicsItem.ItemIsMovable, True)
-        self.setFlag(QGraphicsItem.ItemIsSelectable, True)
-        self.setFlag(QGraphicsItem.ItemSendsGeometryChanges, True)
-        self.rect = rect
-
-    def boundingRect(self):
-        return self.rect
-
-    def paint(self, painter, option, widget=None):
-        if self.isSelected():
-            painter.setRenderHint(QPainter.Antialiasing)
-            painter.setBrush(QBrush(QColor(255, 0, 0, 255)))
-            painter.setPen(QPen(QColor(0, 0, 0, 255), 1.0, Qt.SolidLine, Qt.RoundCap, Qt.RoundJoin))
-        painter.drawEllipse(self.rect)
-
-def make_GraphicsItem_draggable(parent):
-
-    class DraggableGraphicsItem(parent):
-
-        def __init__(self, *args, **kwargs):
-            """
-            By default QGraphicsItems are not movable and also do not emit signals when the position is changed for
-            performance reasons. We need to turn this on.
-            """
-            parent.__init__(self, *args, **kwargs)
-            self.parent = parent
-            self.setFlags(QGraphicsItem.ItemIsMovable | QGraphicsItem.ItemSendsScenePositionChanges)
-            self.signaller = DraggableGraphicsItemSignaller()
-
-        def itemChange(self, change, value):
-            if change == QGraphicsItem.ItemPositionChange:
-                self.signaller.positionChanged.emit(value)
-
-            return parent.itemChange(self, change, value)
-
-    return DraggableGraphicsItem
-
-
 class Polygon(QGraphicsPolygonItem):
     def __init__(self, polygon=QPolygon(), scene=None, pen=QPen(), parent=None):
         super().__init__(polygon, parent)
@@ -1880,7 +1942,7 @@ class Polygon(QGraphicsPolygonItem):
 
         self.rotator = Rotator(parent=self)
         self.rotator.setPos(self.origin_rect.topLeft() - self.resizerOffset)
-        self.rotator.setVisible(True)
+        self.rotator.setVisible(False)
         self.rotator.rotatorSignal.connect(self.rotateRec)
 
 
@@ -1910,7 +1972,6 @@ class Polygon(QGraphicsPolygonItem):
         try:
             center = self.transformOriginPoint()
             angle = math.atan2(center.y() - position.y(), center.x() - position.x()) / math.pi * 180
-            print(position)
             self.setRotation(angle)
             # transform = QTransform()
             # transform.translate(center.x(), center.y())
@@ -1924,28 +1985,33 @@ class Polygon(QGraphicsPolygonItem):
         except ZeroDivisionError:
             pass
 
-    def rotate_item(self, position):
-        item_position = self.transformOriginPoint()
-        angle = math.atan2(item_position.y() - position.y(),
-                           item_position.x() - position.x()) / math.pi * 180
-        self.setRotation(angle)
-
     def resizerVisibilityChange(self, visibleFlag):
         self.resizer.setVisible(visibleFlag)
+
+    def rotatorVisibilityChange(self, visibleFlag):
+        self.rotator.setVisible(visibleFlag)
 
     def populateTextCreator(self, graphicView):
         graphicView.parent().width_edit.setText(str(int(self.polygon().boundingRect().width())))
         graphicView.parent().height_edit.setText(str(int(self.polygon().boundingRect().height())))
 
-    # def resizeRectText(self, width, height):
-    #     rect = self.rect()
-    #     rect.setWidth(width)
-    #     rect.setHeight(height)
-    #     self.setRect(rect)
-    #     resizerWidth = self.resizer.rect.width() / 2
-    #     resizerOffset = QPointF(resizerWidth, resizerWidth)
-    #     self.resizer.setPos(self.rect().bottomRight() - resizerOffset)
+    def scalePolygonText(self, scale):
+        try:
+            center = self.origin_rect.center()
+            transform = QTransform()
+            transform.translate(center.x(), center.y())
+            transform.scale(scale, scale)
+            transform.translate(-center.x(), -center.y())
 
+            newPolygon = transform.map(self.polygon())
+            self.setPolygon(newPolygon)
+            self.prepareGeometryChange()
+            self.update()
+        except ZeroDivisionError:
+            pass
+
+    def rotatePolygonText(self, angle):
+        self.setRotation(angle)
 
 class Resizer(QGraphicsObject):
     resizeSignal = QtCore.Signal(QPointF)
