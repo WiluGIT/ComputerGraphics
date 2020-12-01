@@ -135,7 +135,7 @@ class Window(QMainWindow):
         self.rotate_button = QPushButton(self)
         self.rotate_button.setGeometry(140, 100, 30, 30)
         self.rotate_button.clicked.connect(self.selectRotation)
-        self.rotate_button.setIcon(QIcon(QPixmap("icons/polygon.png")))
+        self.rotate_button.setIcon(QIcon(QPixmap("icons/rotate.png")))
         self.buttonGroup.addButton(self.rotate_button)
 
         self.create_shape_button = QPushButton("Create", self)
@@ -193,6 +193,14 @@ class Window(QMainWindow):
         self.apply_scale.setGeometry(1120, 220, 100, 30)
         self.apply_scale.clicked.connect(self.apply_scale_transform)
         self.resizer_text_section.append(self.apply_scale)
+
+        self.serialize_button = QPushButton("Serialize", self)
+        self.serialize_button.setGeometry(QtCore.QRect(20, 280, 120, 20))
+        self.serialize_button.clicked.connect(self.serialize_scene)
+
+        self.deserialize_button = QPushButton("Deerialize", self)
+        self.deserialize_button.setGeometry(QtCore.QRect(20, 300, 120, 20))
+        self.deserialize_button.clicked.connect(self.deserialize_scene)
 
         # labels
         self.photo = QLabel(self)
@@ -413,6 +421,32 @@ class Window(QMainWindow):
         self.setTextCreatorSectionVisibility(False)
         self.setResizerVisabilitySection(False)
         self.setTextRotatorSectionVisibility(False)
+
+
+    def serialize_scene(self):
+        print(self.graphics_view.polygons_array)
+        polygons = self.graphics_view.polygons_array
+        with open("serialize.txt", "w") as f:
+            for i in polygons:
+                for p in i:
+                    f.write(str(p.x()) + ' ' + str(p.y()) + ' ')
+                f.write("\n")
+
+
+    def deserialize_scene(self):
+        buffer = []
+        with open("serialize.txt", "r") as f:
+            buffer = f.readlines()
+
+        for l in buffer:
+            items = l.split(' ')[:-1]
+            points = []
+            for i in range(0, len(items), 2):
+                x = int(items[i])
+                y = int(items[i+1])
+                points.append(QPoint(x, y))
+            self.graphics_view.drawPolygonLogic(points)
+            points = []
 
     def apply_transform(self):
         try:
@@ -1211,6 +1245,7 @@ class Window(QMainWindow):
     def newPaint(self):
         self.photo.setVisible(False)
         self.setButtonsDisabled(False)
+        self.graphics_view.scene.clear()
 
     def showDialog(self):
         self.window = QDialog()
@@ -1577,6 +1612,7 @@ class GraphicsView(QGraphicsView):
     bezier_lines_array = []
     control_points_array = []
     qpoint_array = []
+    polygons_array = []
     def __init__(self, parent=None):
         super(GraphicsView, self).__init__(parent)
         self.setup_ui()
@@ -1635,6 +1671,7 @@ class GraphicsView(QGraphicsView):
                 if self.qpoint_array:
                     self.clearAllControlPoints()
                     self.drawPolygonLogic(self.qpoint_array)
+                    self.polygons_array.append(self.qpoint_array)
                     self.qpoint_array = []
                     self.control_points = []
 
