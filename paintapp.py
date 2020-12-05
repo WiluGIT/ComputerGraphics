@@ -3,7 +3,7 @@ import math
 import operator
 import os
 from enum import Enum
-
+from scipy.ndimage import binary_opening
 import numpy as np
 from OpenGL.arrays import vbo
 from PIL import Image
@@ -35,6 +35,7 @@ class ToolSelect(Enum):
     Polygon = 6
     Rotate = 7
 
+
 class Window(QMainWindow):
     # consts
     graphic_view_width = 840
@@ -47,6 +48,7 @@ class Window(QMainWindow):
     selected_tool = ToolSelect.Select.value
     # mask value array
     mask_array = []
+
     def __init__(self):
         super().__init__()
         self.setWindowTitle("PaintApp")
@@ -180,9 +182,17 @@ class Window(QMainWindow):
         self.stretch_histogram_button.setGeometry(750, 570, 100, 30)
         self.stretch_histogram_button.clicked.connect(self.stretch_histogram)
 
+        self.photo_analyze_button = QPushButton("Analyze", self)
+        self.photo_analyze_button.setGeometry(750, 620, 100, 30)
+        self.photo_analyze_button.clicked.connect(self.analyze_photo)
+
         self.apply_threshold_button = QPushButton("Apply threshold", self)
         self.apply_threshold_button.setGeometry(500, 630, 100, 30)
         self.apply_threshold_button.clicked.connect(self.apply_threshold)
+
+        self.apply_morphology_button = QPushButton("Apply morphology", self)
+        self.apply_morphology_button.setGeometry(500, 670, 100, 30)
+        self.apply_morphology_button.clicked.connect(self.apply_morphology)
 
         self.apply_transform_button = QPushButton("Transform", self)
         self.apply_transform_button.setGeometry(1120, 130, 100, 30)
@@ -314,7 +324,7 @@ class Window(QMainWindow):
         self.scale_label.setText("Scale:")
         self.resizer_text_section.append(self.scale_label)
 
-        #line edit
+        # line edit
         self.point_start_x1_edit = QLineEdit(self)
         self.point_start_x1_edit.setGeometry(QRect(1080, 130, 30, 30))
         self.text_creator_section.append(self.point_start_x1_edit)
@@ -363,7 +373,6 @@ class Window(QMainWindow):
         self.scale_edit.setGeometry(QRect(1080, 190, 30, 30))
         self.resizer_text_section.append(self.scale_edit)
 
-
         # select box
         self.size_select_box = QComboBox(self)
         self.size_select_box.setGeometry(1050, 230, 50, 30)
@@ -389,6 +398,20 @@ class Window(QMainWindow):
         self.threshold_select_box.addItem("Value threshold")
         self.threshold_select_box.addItem("Percent Black Sel.")
         self.threshold_select_box.addItem("Mean Iterative Sel.")
+
+        self.morphology_select_box = QComboBox(self)
+        self.morphology_select_box.setGeometry(400, 670, 100, 30)
+        self.morphology_select_box.addItem("Dilatation")
+        self.morphology_select_box.addItem("Erosion")
+        self.morphology_select_box.addItem("Opening")
+        self.morphology_select_box.addItem("Closing")
+        self.morphology_select_box.addItem("Hit-or-miss")
+
+        self.photo_analyze_select_box = QComboBox(self)
+        self.photo_analyze_select_box.setGeometry(620, 620, 100, 30)
+        self.photo_analyze_select_box.addItem("Green")
+        self.photo_analyze_select_box.addItem("Red")
+        self.photo_analyze_select_box.addItem("Blue")
         # regex
         y_regex = QtCore.QRegExp("([0-9]|[1-8][0-9]|9[0-9]|[1-3][0-9]{2}|4[0-3][0-9]|440)")  # value between 0 and 440
         y_validator = QRegExpValidator(y_regex)
@@ -396,10 +419,10 @@ class Window(QMainWindow):
         x_regex = QtCore.QRegExp("([0-9]|[1-8][0-9]|9[0-9]|[1-7][0-9]{2}|8[0-3][0-9]|840)")  # value between 0 and 840
         x_validator = QRegExpValidator(x_regex)
 
-        rgb_regex = QtCore.QRegExp("([0-9]|[1-8][0-9]|9[0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])") # value between 0 and 255
+        rgb_regex = QtCore.QRegExp("([0-9]|[1-8][0-9]|9[0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])")  # value between 0 and 255
         rgb_validator = QRegExpValidator(rgb_regex)
 
-        percent_regex = QtCore.QRegExp("([0-9]|[1-8][0-9]|9[0-9]|100)") # value between 0 and 100
+        percent_regex = QtCore.QRegExp("([0-9]|[1-8][0-9]|9[0-9]|100)")  # value between 0 and 100
         percent_validator = QRegExpValidator(percent_regex)
 
         self.point_start_x1_edit.setValidator(x_validator)
@@ -422,7 +445,6 @@ class Window(QMainWindow):
         self.setResizerVisabilitySection(False)
         self.setTextRotatorSectionVisibility(False)
 
-
     def serialize_scene(self):
         print(self.graphics_view.polygons_array)
         polygons = self.graphics_view.polygons_array
@@ -431,7 +453,6 @@ class Window(QMainWindow):
                 for p in i:
                     f.write(str(p.x()) + ' ' + str(p.y()) + ' ')
                 f.write("\n")
-
 
     def deserialize_scene(self):
         buffer = []
@@ -443,7 +464,7 @@ class Window(QMainWindow):
             points = []
             for i in range(0, len(items), 2):
                 x = int(items[i])
-                y = int(items[i+1])
+                y = int(items[i + 1])
                 points.append(QPoint(x, y))
             self.graphics_view.drawPolygonLogic(points)
             points = []
@@ -503,7 +524,7 @@ class Window(QMainWindow):
     def percent_black(self):
         percent = self.percent_select_edit.text()
         if percent:
-            percent = int(percent)/100
+            percent = int(percent) / 100
             img = Image.open("out/greyscale.jpg", "r")
             pix_val = list(img.getdata())
             gray = []
@@ -542,7 +563,204 @@ class Window(QMainWindow):
             msg.setStandardButtons(QMessageBox.Ok)
             msg.exec_()
 
-    def mean_iterative(self):
+    def idx_check(self, index):
+        if index < 0:
+            return 0
+        else:
+            return index
+
+    def dilation(self, binary_img_matrix, mask):
+        binary_img_matrix = np.asarray(binary_img_matrix)
+        structuring_element = np.asarray(mask)
+        ste_shp = structuring_element.shape
+        dilated_img = np.zeros((binary_img_matrix.shape[0], binary_img_matrix.shape[1]))
+        ste_origin = ((structuring_element.shape[0] - 1) / 2, (structuring_element.shape[1] - 1) / 2)
+        for i in range(len(binary_img_matrix)):
+            for j in range(len(binary_img_matrix[0])):
+                width_check = int(self.idx_check(i - ste_origin[0]))
+                height_check = int(self.idx_check(j - ste_origin[1]))
+                overlap = binary_img_matrix[width_check:i + int(ste_shp[0] - ste_origin[0]), height_check:j + int(ste_shp[1] - ste_origin[1])]
+                shp = overlap.shape
+
+                ste_first_row_idx = int(np.fabs(i - ste_origin[0])) if i - ste_origin[0] < 0 else 0
+                ste_first_col_idx = int(np.fabs(j - ste_origin[1])) if j - ste_origin[1] < 0 else 0
+
+                ste_last_row_idx = ste_shp[0] - 1 - (
+                        i + (ste_shp[0] - ste_origin[0]) - binary_img_matrix.shape[0]) if i + (
+                        ste_shp[0] - ste_origin[0]) > binary_img_matrix.shape[0] else ste_shp[0] - 1
+                ste_last_col_idx = ste_shp[1] - 1 - (
+                        j + (ste_shp[1] - ste_origin[1]) - binary_img_matrix.shape[1]) if j + (
+                        ste_shp[1] - ste_origin[1]) > binary_img_matrix.shape[1] else ste_shp[1] - 1
+
+                if shp[0] != 0 and shp[1] != 0 and np.logical_and(
+                        structuring_element[int(ste_first_row_idx):int(ste_last_row_idx + 1),
+                        int(ste_first_col_idx):int(ste_last_col_idx + 1)], overlap).any():
+                    dilated_img[i, j] = 1
+
+        path = "out/morphology.jpg"
+        cv2.imwrite(path, dilated_img * 255)
+        self.setPhotoFromPath(path)
+
+    def erosion(self, binary_img_matrix, mask):
+        binary_img_matrix = np.asarray(binary_img_matrix)
+        structuring_element = np.asarray(mask)
+        ste_shp = structuring_element.shape
+        eroded_img = np.zeros((binary_img_matrix.shape[0], binary_img_matrix.shape[1]))
+        ste_origin = (
+            int(np.ceil((structuring_element.shape[0] - 1) / 2.0)),
+            int(np.ceil((structuring_element.shape[1] - 1) / 2.0)))
+        for i in range(len(binary_img_matrix)):
+            for j in range(len(binary_img_matrix[0])):
+                width_check = int(self.idx_check(i - ste_origin[0]))
+                height_check = int(self.idx_check(j - ste_origin[1]))
+                overlap = binary_img_matrix[width_check:i + int(ste_shp[0] - ste_origin[0]),
+                          height_check:j + int(ste_shp[1] - ste_origin[1])]
+                shp = overlap.shape
+                ste_first_row_idx = int(np.fabs(i - ste_origin[0])) if i - ste_origin[0] < 0 else 0
+                ste_first_col_idx = int(np.fabs(j - ste_origin[1])) if j - ste_origin[1] < 0 else 0
+
+                ste_last_row_idx = ste_shp[0] - 1 - (
+                        i + (ste_shp[0] - ste_origin[0]) - binary_img_matrix.shape[0]) if i + (
+                        ste_shp[0] - ste_origin[0]) > binary_img_matrix.shape[0] else ste_shp[0] - 1
+                ste_last_col_idx = ste_shp[1] - 1 - (
+                        j + (ste_shp[1] - ste_origin[1]) - binary_img_matrix.shape[1]) if j + (
+                        ste_shp[1] - ste_origin[1]) > binary_img_matrix.shape[1] else ste_shp[1] - 1
+
+                if shp[0] != 0 and shp[1] != 0 and np.array_equal(
+                        np.logical_and(overlap, structuring_element[ste_first_row_idx:ste_last_row_idx + 1,
+                                                ste_first_col_idx:ste_last_col_idx + 1]),
+                        structuring_element[ste_first_row_idx:ste_last_row_idx + 1,
+                        ste_first_col_idx:ste_last_col_idx + 1]):
+                    eroded_img[i, j] = 1
+
+        path = "out/morphology.jpg"
+        cv2.imwrite(path, eroded_img * 255)
+        self.setPhotoFromPath(path)
+
+    def opening(self, binary_img_matrix, mask):
+        binary_img_matrix = np.asarray(binary_img_matrix)
+        structuring_element = np.asarray(mask)
+        ste_shp = structuring_element.shape
+        eroded_img = np.zeros((binary_img_matrix.shape[0], binary_img_matrix.shape[1]))
+        ste_origin = (
+            int(np.ceil((structuring_element.shape[0] - 1) / 2.0)),
+            int(np.ceil((structuring_element.shape[1] - 1) / 2.0)))
+        for i in range(len(binary_img_matrix)):
+            for j in range(len(binary_img_matrix[0])):
+                width_check = int(self.idx_check(i - ste_origin[0]))
+                height_check = int(self.idx_check(j - ste_origin[1]))
+                overlap = binary_img_matrix[width_check:i + int(ste_shp[0] - ste_origin[0]),
+                          height_check:j + int(ste_shp[1] - ste_origin[1])]
+                shp = overlap.shape
+                ste_first_row_idx = int(np.fabs(i - ste_origin[0])) if i - ste_origin[0] < 0 else 0
+                ste_first_col_idx = int(np.fabs(j - ste_origin[1])) if j - ste_origin[1] < 0 else 0
+
+                ste_last_row_idx = ste_shp[0] - 1 - (
+                        i + (ste_shp[0] - ste_origin[0]) - binary_img_matrix.shape[0]) if i + (
+                        ste_shp[0] - ste_origin[0]) > binary_img_matrix.shape[0] else ste_shp[0] - 1
+                ste_last_col_idx = ste_shp[1] - 1 - (
+                        j + (ste_shp[1] - ste_origin[1]) - binary_img_matrix.shape[1]) if j + (
+                        ste_shp[1] - ste_origin[1]) > binary_img_matrix.shape[1] else ste_shp[1] - 1
+
+                if shp[0] != 0 and shp[1] != 0 and np.array_equal(
+                        np.logical_and(overlap, structuring_element[ste_first_row_idx:ste_last_row_idx + 1,
+                                                ste_first_col_idx:ste_last_col_idx + 1]),
+                        structuring_element[ste_first_row_idx:ste_last_row_idx + 1,
+                        ste_first_col_idx:ste_last_col_idx + 1]):
+                    eroded_img[i, j] = 1
+
+        binary_img_matrix = np.asarray(eroded_img)
+        dilated_img = np.zeros((binary_img_matrix.shape[0], binary_img_matrix.shape[1]))
+        ste_origin = ((structuring_element.shape[0] - 1) / 2, (structuring_element.shape[1] - 1) / 2)
+        for i in range(len(binary_img_matrix)):
+            for j in range(len(binary_img_matrix[0])):
+                width_check = int(self.idx_check(i - ste_origin[0]))
+                height_check = int(self.idx_check(j - ste_origin[1]))
+                overlap = binary_img_matrix[width_check:i + int(ste_shp[0] - ste_origin[0]),
+                          height_check:j + int(ste_shp[1] - ste_origin[1])]
+                shp = overlap.shape
+
+                ste_first_row_idx = int(np.fabs(i - ste_origin[0])) if i - ste_origin[0] < 0 else 0
+                ste_first_col_idx = int(np.fabs(j - ste_origin[1])) if j - ste_origin[1] < 0 else 0
+
+                ste_last_row_idx = ste_shp[0] - 1 - (
+                        i + (ste_shp[0] - ste_origin[0]) - binary_img_matrix.shape[0]) if i + (
+                        ste_shp[0] - ste_origin[0]) > binary_img_matrix.shape[0] else ste_shp[0] - 1
+                ste_last_col_idx = ste_shp[1] - 1 - (
+                        j + (ste_shp[1] - ste_origin[1]) - binary_img_matrix.shape[1]) if j + (
+                        ste_shp[1] - ste_origin[1]) > binary_img_matrix.shape[1] else ste_shp[1] - 1
+
+                if shp[0] != 0 and shp[1] != 0 and np.logical_and(
+                        structuring_element[int(ste_first_row_idx):int(ste_last_row_idx + 1),
+                        int(ste_first_col_idx):int(ste_last_col_idx + 1)], overlap).any():
+                    dilated_img[i, j] = 1
+        path = "out/morphology.jpg"
+        cv2.imwrite(path, dilated_img * 255)
+        self.setPhotoFromPath(path)
+
+    def closing(self, binary_img_matrix, mask):
+        binary_img_matrix = np.asarray(binary_img_matrix)
+        structuring_element = np.asarray(mask)
+        ste_shp = structuring_element.shape
+        dilated_img = np.zeros((binary_img_matrix.shape[0], binary_img_matrix.shape[1]))
+        ste_origin = ((structuring_element.shape[0] - 1) / 2, (structuring_element.shape[1] - 1) / 2)
+        for i in range(len(binary_img_matrix)):
+            for j in range(len(binary_img_matrix[0])):
+                width_check = int(self.idx_check(i - ste_origin[0]))
+                height_check = int(self.idx_check(j - ste_origin[1]))
+                overlap = binary_img_matrix[width_check:i + int(ste_shp[0] - ste_origin[0]),
+                          height_check:j + int(ste_shp[1] - ste_origin[1])]
+                shp = overlap.shape
+
+                ste_first_row_idx = int(np.fabs(i - ste_origin[0])) if i - ste_origin[0] < 0 else 0
+                ste_first_col_idx = int(np.fabs(j - ste_origin[1])) if j - ste_origin[1] < 0 else 0
+
+                ste_last_row_idx = ste_shp[0] - 1 - (
+                        i + (ste_shp[0] - ste_origin[0]) - binary_img_matrix.shape[0]) if i + (
+                        ste_shp[0] - ste_origin[0]) > binary_img_matrix.shape[0] else ste_shp[0] - 1
+                ste_last_col_idx = ste_shp[1] - 1 - (
+                        j + (ste_shp[1] - ste_origin[1]) - binary_img_matrix.shape[1]) if j + (
+                        ste_shp[1] - ste_origin[1]) > binary_img_matrix.shape[1] else ste_shp[1] - 1
+
+                if shp[0] != 0 and shp[1] != 0 and np.logical_and(
+                        structuring_element[int(ste_first_row_idx):int(ste_last_row_idx + 1),
+                        int(ste_first_col_idx):int(ste_last_col_idx + 1)], overlap).any():
+                    dilated_img[i, j] = 1
+
+        binary_img_matrix = np.asarray(dilated_img)
+        eroded_img = np.zeros((binary_img_matrix.shape[0], binary_img_matrix.shape[1]))
+        ste_origin = (
+            int(np.ceil((structuring_element.shape[0] - 1) / 2.0)),
+            int(np.ceil((structuring_element.shape[1] - 1) / 2.0)))
+        for i in range(len(binary_img_matrix)):
+            for j in range(len(binary_img_matrix[0])):
+                width_check = int(self.idx_check(i - ste_origin[0]))
+                height_check = int(self.idx_check(j - ste_origin[1]))
+                overlap = binary_img_matrix[width_check:i + int(ste_shp[0] - ste_origin[0]),
+                          height_check:j + int(ste_shp[1] - ste_origin[1])]
+                shp = overlap.shape
+                ste_first_row_idx = int(np.fabs(i - ste_origin[0])) if i - ste_origin[0] < 0 else 0
+                ste_first_col_idx = int(np.fabs(j - ste_origin[1])) if j - ste_origin[1] < 0 else 0
+
+                ste_last_row_idx = ste_shp[0] - 1 - (
+                        i + (ste_shp[0] - ste_origin[0]) - binary_img_matrix.shape[0]) if i + (
+                        ste_shp[0] - ste_origin[0]) > binary_img_matrix.shape[0] else ste_shp[0] - 1
+                ste_last_col_idx = ste_shp[1] - 1 - (
+                        j + (ste_shp[1] - ste_origin[1]) - binary_img_matrix.shape[1]) if j + (
+                        ste_shp[1] - ste_origin[1]) > binary_img_matrix.shape[1] else ste_shp[1] - 1
+
+                if shp[0] != 0 and shp[1] != 0 and np.array_equal(
+                        np.logical_and(overlap, structuring_element[ste_first_row_idx:ste_last_row_idx + 1,
+                                                ste_first_col_idx:ste_last_col_idx + 1]),
+                        structuring_element[ste_first_row_idx:ste_last_row_idx + 1,
+                        ste_first_col_idx:ste_last_col_idx + 1]):
+                    eroded_img[i, j] = 1
+
+        path = "out/morphology.jpg"
+        cv2.imwrite(path, eroded_img * 255)
+        self.setPhotoFromPath(path)
+
+    def mean_iterative(self, isReturn=False):
         img = Image.open("out/greyscale.jpg", "r")
         pix_val = list(img.getdata())
         gray = []
@@ -554,7 +772,7 @@ class Window(QMainWindow):
         k = 1
         threshold = 0
         while True:
-            t_end = t[k-1]
+            t_end = t[k - 1]
             sum1 = 0
             sum2 = 0
             for i in range(t_end):
@@ -608,8 +826,100 @@ class Window(QMainWindow):
 
         threshold_img = Image.new('L', img.size)
         threshold_img.putdata(result_img)
+
+        if isReturn == True:
+            return threshold_img
+
         threshold_img.save("out/mis_threshold.jpg")
         self.setPhotoFromPath("out/mis_threshold.jpg")
+
+    def apply_morphology(self):
+        index = int(self.morphology_select_box.currentIndex())
+        path = self.path_label.text()
+
+        if path:
+            self.turn_grayscale()
+            binary_array = self.mean_iterative(True)
+            mask = np.ones((3, 3))
+            print(binary_array)
+            if index == 0:
+                self.dilation(binary_array, mask)
+            elif index == 1:
+                self.erosion(binary_array, mask)
+            elif index == 2:
+                self.opening(binary_array, mask)
+            elif index == 3:
+                self.closing(binary_array, mask)
+            elif index == 4:
+                print("hir or miss")
+        else:
+            msg = QMessageBox()
+            msg.setIcon(QMessageBox.Warning)
+            msg.setText("Load image to apply threshold")
+            msg.setWindowTitle("Warning!")
+            msg.setStandardButtons(QMessageBox.Ok)
+            msg.exec_()
+
+    def calculate_photo_color(self, color):
+        img = Image.open(self.path_label.text(), "r")
+        image = img.convert("RGB")
+        pix_val = list(image.getdata())
+
+        result_img = []
+        pix_counter = 0
+        if color == "green":
+            for i in range(len(pix_val)):
+                if pix_val[i][1] > pix_val[i][0] and pix_val[i][1] > pix_val[i][2]:
+                    result_img.append((0, 0, 0))
+                    pix_counter += 1
+                else:
+                    result_img.append(pix_val[i])
+        elif color == "red":
+            for i in range(len(pix_val)):
+                if pix_val[i][0] > pix_val[i][1] and pix_val[i][0] > pix_val[i][2]:
+                    result_img.append((0, 0, 0))
+                    pix_counter += 1
+                else:
+                    result_img.append(pix_val[i])
+        elif color == "blue":
+            for i in range(len(pix_val)):
+                if pix_val[i][2] > pix_val[i][0] and pix_val[i][2] > pix_val[i][1]:
+                    result_img.append((0, 0, 0))
+                    pix_counter += 1
+                else:
+                    result_img.append(pix_val[i])
+
+
+        percent = (pix_counter / len(pix_val)) * 100
+        image = Image.new('RGB', img.size)
+        image.putdata(result_img)
+        image.save("out/color_analyze.png")
+        self.setPhotoFromPath("out/color_analyze.png")
+        msg = QMessageBox()
+        msg.setIcon(QMessageBox.Information)
+        msg.setText("Percent of {} = {:.2f}%".format(color, percent))
+        msg.setWindowTitle("Photo analyze")
+        msg.setStandardButtons(QMessageBox.Ok)
+        msg.exec_()
+
+    def analyze_photo(self):
+        index = int(self.photo_analyze_select_box.currentIndex())
+        path = self.path_label.text()
+
+        if path:
+            if index == 0:
+                self.calculate_photo_color("green")
+            elif index == 1:
+                self.calculate_photo_color("red")
+            elif index == 2:
+                self.calculate_photo_color("blue")
+        else:
+            msg = QMessageBox()
+            msg.setIcon(QMessageBox.Warning)
+            msg.setText("Load image to analyze photo")
+            msg.setWindowTitle("Warning!")
+            msg.setStandardButtons(QMessageBox.Ok)
+            msg.exec_()
 
     def apply_threshold(self):
         index = int(self.threshold_select_box.currentIndex())
@@ -643,7 +953,6 @@ class Window(QMainWindow):
         greyscale_img = Image.new('L', img.size)
         greyscale_img.putdata(result_greyscale)
         greyscale_img.save("out/greyscale.jpg")
-
 
     def plot_histogram(self):
         try:
@@ -1163,7 +1472,8 @@ class Window(QMainWindow):
 
         if self.window.exec_() == 1:
             self.colorLabel.setStyleSheet(
-                "QLabel{{ background-color: rgb({},{},{});}}".format(self.window.color_rgb.red(), self.window.color_rgb.green(),
+                "QLabel{{ background-color: rgb({},{},{});}}".format(self.window.color_rgb.red(),
+                                                                     self.window.color_rgb.green(),
                                                                      self.window.color_rgb.blue()))
             self.graphics_view.graphic_Pen = QPen(QColor(self.window.color_rgb))
             self.size_combo_box()
@@ -1175,10 +1485,11 @@ class Window(QMainWindow):
         self.window.show()
 
         if self.window.exec_() == 1:
-            self.colorLabel.setStyleSheet("QLabel{{ background-color: rgb({},{},{});}}".format(self.ui.rSpin.value(), self.ui.gSpin.value(),
-                                                                               self.ui.bSpin.value()))
+            self.colorLabel.setStyleSheet(
+                "QLabel{{ background-color: rgb({},{},{});}}".format(self.ui.rSpin.value(), self.ui.gSpin.value(),
+                                                                     self.ui.bSpin.value()))
             self.graphics_view.graphic_Pen = QPen(QColor(self.ui.rSpin.value(), self.ui.gSpin.value(),
-                                                                               self.ui.bSpin.value()))
+                                                         self.ui.bSpin.value()))
             self.size_combo_box()
 
     def show_point_dialog(self):
@@ -1531,7 +1842,8 @@ class Window(QMainWindow):
             y2 = int(self.point_end_y2_edit.text())
 
             if self.selected_tool == ToolSelect.Line.value:
-                self.graphics_view.scene.addItem(Line(QLineF(x1, y1, x2, y2), self.graphics_view.scene, self.graphics_view.graphic_Pen))
+                self.graphics_view.scene.addItem(
+                    Line(QLineF(x1, y1, x2, y2), self.graphics_view.scene, self.graphics_view.graphic_Pen))
             elif self.selected_tool == ToolSelect.Rectangle.value:
                 self.graphics_view.drawRectangleLogic(x1, y1, x2, y2)
             elif self.selected_tool == ToolSelect.Ellipse.value:
@@ -1551,7 +1863,8 @@ class Window(QMainWindow):
             if type(self.graphics_view.selected_item) == Line:
                 self.graphics_view.selected_item.resizeLineText(int(self.width_edit.text()))
             else:
-                self.graphics_view.selected_item.resizeRectText(int(self.width_edit.text()), int(self.height_edit.text()))
+                self.graphics_view.selected_item.resizeRectText(int(self.width_edit.text()),
+                                                                int(self.height_edit.text()))
         except ValueError:
             msg = QMessageBox()
             msg.setIcon(QMessageBox.Information)
@@ -1613,6 +1926,7 @@ class GraphicsView(QGraphicsView):
     control_points_array = []
     qpoint_array = []
     polygons_array = []
+
     def __init__(self, parent=None):
         super(GraphicsView, self).__init__(parent)
         self.setup_ui()
@@ -1634,7 +1948,8 @@ class GraphicsView(QGraphicsView):
             "(x: {}, y: {})".format(self.parent().mouse_cords.x(), self.parent().mouse_cords.y()))
 
         selected_item = self.scene.selectedItems()
-        if len(selected_item) == 1 and type(selected_item[0]) == ControlPoint and self.parent().selected_tool == ToolSelect.Select.value:
+        if len(selected_item) == 1 and type(
+                selected_item[0]) == ControlPoint and self.parent().selected_tool == ToolSelect.Select.value:
             group_id = selected_item[0].getGroupId()
             if len(self.bezier_lines_array[group_id]) > 0:
                 for line in self.bezier_lines_array[group_id]:
@@ -1899,6 +2214,7 @@ class Rectangle(QGraphicsRectItem):
 class ControlPoint(QGraphicsEllipseItem):
     control_point_ids = 0
     curve_group_id = 0
+
     def __init__(self, rect=QRectF(), scene=None, pen=QPen(), parent=None):
         super().__init__(rect, parent)
         self.setFlag(QGraphicsItem.ItemIsSelectable, False)
@@ -1983,7 +2299,6 @@ class Polygon(QGraphicsPolygonItem):
         self.rotator.setVisible(False)
         self.rotator.rotatorSignal.connect(self.rotateRec)
 
-
     @QtCore.Slot(QGraphicsObject)
     def resizeRec(self, change):
         try:
@@ -2051,6 +2366,7 @@ class Polygon(QGraphicsPolygonItem):
     def rotatePolygonText(self, angle):
         self.setRotation(angle)
 
+
 class Resizer(QGraphicsObject):
     resizeSignal = QtCore.Signal(QPointF)
 
@@ -2116,7 +2432,7 @@ class Ui_Dialog(QDialog):
         self.buttonBox = QDialogButtonBox(Dialog)
         self.buttonBox.setGeometry(QtCore.QRect(30, 160, 341, 32))
         self.buttonBox.setOrientation(QtCore.Qt.Horizontal)
-        self.buttonBox.setStandardButtons(QDialogButtonBox.Cancel|QDialogButtonBox.Ok)
+        self.buttonBox.setStandardButtons(QDialogButtonBox.Cancel | QDialogButtonBox.Ok)
 
         self.quality_label = QLabel("Quality:", Dialog)
         self.quality_label.setGeometry(QtCore.QRect(20, 30, 366, 41))
@@ -2288,12 +2604,10 @@ class Color_Dialog(object):
         QtCore.QMetaObject.connectSlotsByName(Dialog)
         self.convertCMYKtoRGB()
 
-
     def cSliderValueChange(self):
         value = self.cSlider.value()
         self.cSpin.setValue(value)
         self.convertCMYKtoRGB()
-
 
     def mSliderValueChange(self):
         value = self.mSlider.value()
@@ -2368,7 +2682,7 @@ class Color_Dialog(object):
             self.ySpin.setValue(round(yellow * 100))
             self.kSpin.setValue(round(black * 100))
             color_label = "QLabel{{ background-color: rgb({},{},{});}}".format(self.rSpin.value(), self.gSpin.value(),
-                                                                           self.bSpin.value())
+                                                                               self.bSpin.value())
             self.color_value_label.setStyleSheet(color_label)
 
         except ZeroDivisionError:
@@ -2392,7 +2706,8 @@ class Color_Dialog(object):
             self.rSpin.setValue(round(red * 255))
             self.gSpin.setValue(round(green * 255))
             self.bSpin.setValue(round(blue * 255))
-            color_label ="QLabel{{ background-color: rgb({},{},{});}}".format(self.rSpin.value(), self.gSpin.value(), self.bSpin.value())
+            color_label = "QLabel{{ background-color: rgb({},{},{});}}".format(self.rSpin.value(), self.gSpin.value(),
+                                                                               self.bSpin.value())
             self.color_value_label.setStyleSheet(color_label)
         except ZeroDivisionError:
             pass
@@ -2423,7 +2738,7 @@ class CubeWindow(QDialog):
         self.color_rgb = QColor()
 
         timer = QtCore.QTimer(self)
-        timer.setInterval(20)   # period, in milliseconds
+        timer.setInterval(20)  # period, in milliseconds
         timer.timeout.connect(self.glWidget.updateGL)
         timer.start()
 
@@ -2445,6 +2760,7 @@ class CubeWindow(QDialog):
 
 class GLWidget(QGLWidget):
     colorSignal = QtCore.Signal(QColor)
+
     def __init__(self, parent=None):
         self.parent = parent
         QtOpenGL.QGLWidget.__init__(self, parent)
@@ -2534,7 +2850,8 @@ class GLWidget(QGLWidget):
         self.lastPos = event.pos()
         yFromBottom = 235
 
-        c = gl.glReadPixels(self.lastPos.x(), self.height() - self.lastPos.y(), 1.0, 1.0, gl.GL_RGB, gl.GL_UNSIGNED_BYTE, None)
+        c = gl.glReadPixels(self.lastPos.x(), self.height() - self.lastPos.y(), 1.0, 1.0, gl.GL_RGB,
+                            gl.GL_UNSIGNED_BYTE, None)
         r = ord(c[:1])
         g = ord(c[1:2])
         b = ord(c[2:3])
@@ -2586,7 +2903,7 @@ class PointDialog(object):
         self.buttonBox = QDialogButtonBox(Dialog)
         self.buttonBox.setGeometry(QtCore.QRect(10, 200, 341, 32))
         self.buttonBox.setOrientation(QtCore.Qt.Horizontal)
-        self.buttonBox.setStandardButtons(QDialogButtonBox.Cancel|QDialogButtonBox.Ok)
+        self.buttonBox.setStandardButtons(QDialogButtonBox.Cancel | QDialogButtonBox.Ok)
         self.buttonBox.setObjectName("buttonBox")
 
         self.greyscale_dropdown = QComboBox(Dialog)
@@ -2645,7 +2962,6 @@ class PointDialog(object):
         self.brightness_slider.setOrientation(QtCore.Qt.Horizontal)
         self.brightness_slider.setObjectName("brightness_slider")
         self.brightness_slider.setVisible(False)
-
 
         self.brightness_label = QLabel(Dialog)
         self.brightness_label.setGeometry(QtCore.QRect(20, 140, 131, 16))
@@ -2914,7 +3230,7 @@ class MaskDialog(object):
         self.buttonBox = QDialogButtonBox(MaskDialog)
         self.buttonBox.setGeometry(QtCore.QRect(10, 160, 151, 32))
         self.buttonBox.setOrientation(QtCore.Qt.Horizontal)
-        self.buttonBox.setStandardButtons(QDialogButtonBox.Cancel|QDialogButtonBox.Ok)
+        self.buttonBox.setStandardButtons(QDialogButtonBox.Cancel | QDialogButtonBox.Ok)
         self.buttonBox.setObjectName("buttonBox")
 
         self.comboBox = QComboBox(MaskDialog)
@@ -2945,6 +3261,7 @@ class MaskDialog(object):
 
         # init combobox
         self.mask_size_change()
+
     def retranslateUi(self, MaskDialog):
         _translate = QtCore.QCoreApplication.translate
         MaskDialog.setWindowTitle(_translate("MaskDialog", "Mask"))
@@ -3000,7 +3317,7 @@ class MaskDialog(object):
         matrix_text = ""
         for i in range(size):
             for j in range(size):
-                if i == size-1 and j == size-1:
+                if i == size - 1 and j == size - 1:
                     matrix_text += "1"
                 else:
                     matrix_text += "1,"
