@@ -569,195 +569,195 @@ class Window(QMainWindow):
         else:
             return index
 
-    def dilation(self, binary_img_matrix, mask):
-        binary_img_matrix = np.asarray(binary_img_matrix)
-        structuring_element = np.asarray(mask)
-        ste_shp = structuring_element.shape
-        dilated_img = np.zeros((binary_img_matrix.shape[0], binary_img_matrix.shape[1]))
-        ste_origin = ((structuring_element.shape[0] - 1) / 2, (structuring_element.shape[1] - 1) / 2)
-        for i in range(len(binary_img_matrix)):
-            for j in range(len(binary_img_matrix[0])):
-                width_check = int(self.idx_check(i - ste_origin[0]))
-                height_check = int(self.idx_check(j - ste_origin[1]))
-                overlap = binary_img_matrix[width_check:i + int(ste_shp[0] - ste_origin[0]), height_check:j + int(ste_shp[1] - ste_origin[1])]
-                shp = overlap.shape
+    def dilation(self, source_img_data, mask):
+        source_img_data = np.asarray(source_img_data)
+        mask_array = np.asarray(mask)
+        mask_shape = mask_array.shape
+        result_img = np.zeros((source_img_data.shape[0], source_img_data.shape[1]))
+        mask_pad = ((mask_array.shape[0] - 1) / 2, (mask_array.shape[1] - 1) / 2)
+        for i in range(len(source_img_data)):
+            for j in range(len(source_img_data[0])):
+                width_check = int(self.idx_check(i - mask_pad[0]))
+                height_check = int(self.idx_check(j - mask_pad[1]))
+                process_data = source_img_data[width_check:i + int(mask_shape[0] - mask_pad[0]), height_check:j + int(mask_shape[1] - mask_pad[1])]
+                data_shape = process_data.shape
 
-                ste_first_row_idx = int(np.fabs(i - ste_origin[0])) if i - ste_origin[0] < 0 else 0
-                ste_first_col_idx = int(np.fabs(j - ste_origin[1])) if j - ste_origin[1] < 0 else 0
+                mask_first_row = int(np.fabs(i - mask_pad[0])) if i - mask_pad[0] < 0 else 0
+                mask_first_col = int(np.fabs(j - mask_pad[1])) if j - mask_pad[1] < 0 else 0
 
-                ste_last_row_idx = ste_shp[0] - 1 - (
-                        i + (ste_shp[0] - ste_origin[0]) - binary_img_matrix.shape[0]) if i + (
-                        ste_shp[0] - ste_origin[0]) > binary_img_matrix.shape[0] else ste_shp[0] - 1
-                ste_last_col_idx = ste_shp[1] - 1 - (
-                        j + (ste_shp[1] - ste_origin[1]) - binary_img_matrix.shape[1]) if j + (
-                        ste_shp[1] - ste_origin[1]) > binary_img_matrix.shape[1] else ste_shp[1] - 1
+                mask_last_row = mask_shape[0] - 1 - (
+                        i + (mask_shape[0] - mask_pad[0]) - source_img_data.shape[0]) if i + (
+                        mask_shape[0] - mask_pad[0]) > source_img_data.shape[0] else mask_shape[0] - 1
+                mask_last_col = mask_shape[1] - 1 - (
+                        j + (mask_shape[1] - mask_pad[1]) - source_img_data.shape[1]) if j + (
+                        mask_shape[1] - mask_pad[1]) > source_img_data.shape[1] else mask_shape[1] - 1
 
-                if shp[0] != 0 and shp[1] != 0 and np.logical_and(
-                        structuring_element[int(ste_first_row_idx):int(ste_last_row_idx + 1),
-                        int(ste_first_col_idx):int(ste_last_col_idx + 1)], overlap).any():
-                    dilated_img[i, j] = 1
+                if data_shape[0] != 0 and data_shape[1] != 0 and np.logical_and(
+                        mask_array[int(mask_first_row):int(mask_last_row + 1),
+                        int(mask_first_col):int(mask_last_col + 1)], process_data).any():
+                    result_img[i, j] = 1
 
         path = "out/morphology.jpg"
-        cv2.imwrite(path, dilated_img * 255)
+        cv2.imwrite(path, result_img * 255)
         self.setPhotoFromPath(path)
 
-    def erosion(self, binary_img_matrix, mask):
-        binary_img_matrix = np.asarray(binary_img_matrix)
-        structuring_element = np.asarray(mask)
-        ste_shp = structuring_element.shape
-        eroded_img = np.zeros((binary_img_matrix.shape[0], binary_img_matrix.shape[1]))
-        ste_origin = (
-            int(np.ceil((structuring_element.shape[0] - 1) / 2.0)),
-            int(np.ceil((structuring_element.shape[1] - 1) / 2.0)))
-        for i in range(len(binary_img_matrix)):
-            for j in range(len(binary_img_matrix[0])):
-                width_check = int(self.idx_check(i - ste_origin[0]))
-                height_check = int(self.idx_check(j - ste_origin[1]))
-                overlap = binary_img_matrix[width_check:i + int(ste_shp[0] - ste_origin[0]),
-                          height_check:j + int(ste_shp[1] - ste_origin[1])]
-                shp = overlap.shape
-                ste_first_row_idx = int(np.fabs(i - ste_origin[0])) if i - ste_origin[0] < 0 else 0
-                ste_first_col_idx = int(np.fabs(j - ste_origin[1])) if j - ste_origin[1] < 0 else 0
+    def erosion(self, source_img_data, mask):
+        source_img_data = np.asarray(source_img_data)
+        mask_array = np.asarray(mask)
+        mask_shape = mask_array.shape
+        result_img = np.zeros((source_img_data.shape[0], source_img_data.shape[1]))
+        mask_pad = (
+            int(np.ceil((mask_array.shape[0] - 1) / 2.0)),
+            int(np.ceil((mask_array.shape[1] - 1) / 2.0)))
+        for i in range(len(source_img_data)):
+            for j in range(len(source_img_data[0])):
+                width_check = int(self.idx_check(i - mask_pad[0]))
+                height_check = int(self.idx_check(j - mask_pad[1]))
+                process_data = source_img_data[width_check:i + int(mask_shape[0] - mask_pad[0]),
+                          height_check:j + int(mask_shape[1] - mask_pad[1])]
+                data_shape = process_data.shape
+                mask_first_row = int(np.fabs(i - mask_pad[0])) if i - mask_pad[0] < 0 else 0
+                mask_first_col = int(np.fabs(j - mask_pad[1])) if j - mask_pad[1] < 0 else 0
 
-                ste_last_row_idx = ste_shp[0] - 1 - (
-                        i + (ste_shp[0] - ste_origin[0]) - binary_img_matrix.shape[0]) if i + (
-                        ste_shp[0] - ste_origin[0]) > binary_img_matrix.shape[0] else ste_shp[0] - 1
-                ste_last_col_idx = ste_shp[1] - 1 - (
-                        j + (ste_shp[1] - ste_origin[1]) - binary_img_matrix.shape[1]) if j + (
-                        ste_shp[1] - ste_origin[1]) > binary_img_matrix.shape[1] else ste_shp[1] - 1
+                mask_last_row = mask_shape[0] - 1 - (
+                        i + (mask_shape[0] - mask_pad[0]) - source_img_data.shape[0]) if i + (
+                        mask_shape[0] - mask_pad[0]) > source_img_data.shape[0] else mask_shape[0] - 1
+                mask_last_col = mask_shape[1] - 1 - (
+                        j + (mask_shape[1] - mask_pad[1]) - source_img_data.shape[1]) if j + (
+                        mask_shape[1] - mask_pad[1]) > source_img_data.shape[1] else mask_shape[1] - 1
 
-                if shp[0] != 0 and shp[1] != 0 and np.array_equal(
-                        np.logical_and(overlap, structuring_element[ste_first_row_idx:ste_last_row_idx + 1,
-                                                ste_first_col_idx:ste_last_col_idx + 1]),
-                        structuring_element[ste_first_row_idx:ste_last_row_idx + 1,
-                        ste_first_col_idx:ste_last_col_idx + 1]):
-                    eroded_img[i, j] = 1
+                if data_shape[0] != 0 and data_shape[1] != 0 and np.array_equal(
+                        np.logical_and(process_data, mask_array[mask_first_row:mask_last_row + 1,
+                                                mask_first_col:mask_last_col + 1]),
+                        mask_array[mask_first_row:mask_last_row + 1,
+                        mask_first_col:mask_last_col + 1]):
+                    result_img[i, j] = 1
 
         path = "out/morphology.jpg"
-        cv2.imwrite(path, eroded_img * 255)
+        cv2.imwrite(path, result_img * 255)
         self.setPhotoFromPath(path)
 
-    def opening(self, binary_img_matrix, mask):
-        binary_img_matrix = np.asarray(binary_img_matrix)
-        structuring_element = np.asarray(mask)
-        ste_shp = structuring_element.shape
-        eroded_img = np.zeros((binary_img_matrix.shape[0], binary_img_matrix.shape[1]))
-        ste_origin = (
-            int(np.ceil((structuring_element.shape[0] - 1) / 2.0)),
-            int(np.ceil((structuring_element.shape[1] - 1) / 2.0)))
-        for i in range(len(binary_img_matrix)):
-            for j in range(len(binary_img_matrix[0])):
-                width_check = int(self.idx_check(i - ste_origin[0]))
-                height_check = int(self.idx_check(j - ste_origin[1]))
-                overlap = binary_img_matrix[width_check:i + int(ste_shp[0] - ste_origin[0]),
-                          height_check:j + int(ste_shp[1] - ste_origin[1])]
-                shp = overlap.shape
-                ste_first_row_idx = int(np.fabs(i - ste_origin[0])) if i - ste_origin[0] < 0 else 0
-                ste_first_col_idx = int(np.fabs(j - ste_origin[1])) if j - ste_origin[1] < 0 else 0
+    def opening(self, source_img_data, mask):
+        source_img_data = np.asarray(source_img_data)
+        mask_array = np.asarray(mask)
+        mask_shape = mask_array.shape
+        result_img = np.zeros((source_img_data.shape[0], source_img_data.shape[1]))
+        mask_pad = (
+            int(np.ceil((mask_array.shape[0] - 1) / 2.0)),
+            int(np.ceil((mask_array.shape[1] - 1) / 2.0)))
+        for i in range(len(source_img_data)):
+            for j in range(len(source_img_data[0])):
+                width_check = int(self.idx_check(i - mask_pad[0]))
+                height_check = int(self.idx_check(j - mask_pad[1]))
+                process_data = source_img_data[width_check:i + int(mask_shape[0] - mask_pad[0]),
+                               height_check:j + int(mask_shape[1] - mask_pad[1])]
+                data_shape = process_data.shape
+                mask_first_row = int(np.fabs(i - mask_pad[0])) if i - mask_pad[0] < 0 else 0
+                mask_first_col = int(np.fabs(j - mask_pad[1])) if j - mask_pad[1] < 0 else 0
 
-                ste_last_row_idx = ste_shp[0] - 1 - (
-                        i + (ste_shp[0] - ste_origin[0]) - binary_img_matrix.shape[0]) if i + (
-                        ste_shp[0] - ste_origin[0]) > binary_img_matrix.shape[0] else ste_shp[0] - 1
-                ste_last_col_idx = ste_shp[1] - 1 - (
-                        j + (ste_shp[1] - ste_origin[1]) - binary_img_matrix.shape[1]) if j + (
-                        ste_shp[1] - ste_origin[1]) > binary_img_matrix.shape[1] else ste_shp[1] - 1
+                mask_last_row = mask_shape[0] - 1 - (
+                        i + (mask_shape[0] - mask_pad[0]) - source_img_data.shape[0]) if i + (
+                        mask_shape[0] - mask_pad[0]) > source_img_data.shape[0] else mask_shape[0] - 1
+                mask_last_col = mask_shape[1] - 1 - (
+                        j + (mask_shape[1] - mask_pad[1]) - source_img_data.shape[1]) if j + (
+                        mask_shape[1] - mask_pad[1]) > source_img_data.shape[1] else mask_shape[1] - 1
 
-                if shp[0] != 0 and shp[1] != 0 and np.array_equal(
-                        np.logical_and(overlap, structuring_element[ste_first_row_idx:ste_last_row_idx + 1,
-                                                ste_first_col_idx:ste_last_col_idx + 1]),
-                        structuring_element[ste_first_row_idx:ste_last_row_idx + 1,
-                        ste_first_col_idx:ste_last_col_idx + 1]):
-                    eroded_img[i, j] = 1
+                if data_shape[0] != 0 and data_shape[1] != 0 and np.array_equal(
+                        np.logical_and(process_data, mask_array[mask_first_row:mask_last_row + 1,
+                                                     mask_first_col:mask_last_col + 1]),
+                        mask_array[mask_first_row:mask_last_row + 1,
+                        mask_first_col:mask_last_col + 1]):
+                    result_img[i, j] = 1
 
-        binary_img_matrix = np.asarray(eroded_img)
-        dilated_img = np.zeros((binary_img_matrix.shape[0], binary_img_matrix.shape[1]))
-        ste_origin = ((structuring_element.shape[0] - 1) / 2, (structuring_element.shape[1] - 1) / 2)
-        for i in range(len(binary_img_matrix)):
-            for j in range(len(binary_img_matrix[0])):
-                width_check = int(self.idx_check(i - ste_origin[0]))
-                height_check = int(self.idx_check(j - ste_origin[1]))
-                overlap = binary_img_matrix[width_check:i + int(ste_shp[0] - ste_origin[0]),
-                          height_check:j + int(ste_shp[1] - ste_origin[1])]
-                shp = overlap.shape
+        source_img_data = np.asarray(result_img)
+        opening_img = np.zeros((source_img_data.shape[0], source_img_data.shape[1]))
+        for i in range(len(source_img_data)):
+            for j in range(len(source_img_data[0])):
+                width_check = int(self.idx_check(i - mask_pad[0]))
+                height_check = int(self.idx_check(j - mask_pad[1]))
+                process_data = source_img_data[width_check:i + int(mask_shape[0] - mask_pad[0]),
+                               height_check:j + int(mask_shape[1] - mask_pad[1])]
+                data_shape = process_data.shape
 
-                ste_first_row_idx = int(np.fabs(i - ste_origin[0])) if i - ste_origin[0] < 0 else 0
-                ste_first_col_idx = int(np.fabs(j - ste_origin[1])) if j - ste_origin[1] < 0 else 0
+                mask_first_row = int(np.fabs(i - mask_pad[0])) if i - mask_pad[0] < 0 else 0
+                mask_first_col = int(np.fabs(j - mask_pad[1])) if j - mask_pad[1] < 0 else 0
 
-                ste_last_row_idx = ste_shp[0] - 1 - (
-                        i + (ste_shp[0] - ste_origin[0]) - binary_img_matrix.shape[0]) if i + (
-                        ste_shp[0] - ste_origin[0]) > binary_img_matrix.shape[0] else ste_shp[0] - 1
-                ste_last_col_idx = ste_shp[1] - 1 - (
-                        j + (ste_shp[1] - ste_origin[1]) - binary_img_matrix.shape[1]) if j + (
-                        ste_shp[1] - ste_origin[1]) > binary_img_matrix.shape[1] else ste_shp[1] - 1
+                mask_last_row = mask_shape[0] - 1 - (
+                        i + (mask_shape[0] - mask_pad[0]) - source_img_data.shape[0]) if i + (
+                        mask_shape[0] - mask_pad[0]) > source_img_data.shape[0] else mask_shape[0] - 1
+                mask_last_col = mask_shape[1] - 1 - (
+                        j + (mask_shape[1] - mask_pad[1]) - source_img_data.shape[1]) if j + (
+                        mask_shape[1] - mask_pad[1]) > source_img_data.shape[1] else mask_shape[1] - 1
 
-                if shp[0] != 0 and shp[1] != 0 and np.logical_and(
-                        structuring_element[int(ste_first_row_idx):int(ste_last_row_idx + 1),
-                        int(ste_first_col_idx):int(ste_last_col_idx + 1)], overlap).any():
-                    dilated_img[i, j] = 1
+                if data_shape[0] != 0 and data_shape[1] != 0 and np.logical_and(
+                        mask_array[int(mask_first_row):int(mask_last_row + 1),
+                        int(mask_first_col):int(mask_last_col + 1)], process_data).any():
+                    opening_img[i, j] = 1
+
         path = "out/morphology.jpg"
-        cv2.imwrite(path, dilated_img * 255)
+        cv2.imwrite(path, opening_img * 255)
         self.setPhotoFromPath(path)
 
-    def closing(self, binary_img_matrix, mask):
-        binary_img_matrix = np.asarray(binary_img_matrix)
-        structuring_element = np.asarray(mask)
-        ste_shp = structuring_element.shape
-        dilated_img = np.zeros((binary_img_matrix.shape[0], binary_img_matrix.shape[1]))
-        ste_origin = ((structuring_element.shape[0] - 1) / 2, (structuring_element.shape[1] - 1) / 2)
-        for i in range(len(binary_img_matrix)):
-            for j in range(len(binary_img_matrix[0])):
-                width_check = int(self.idx_check(i - ste_origin[0]))
-                height_check = int(self.idx_check(j - ste_origin[1]))
-                overlap = binary_img_matrix[width_check:i + int(ste_shp[0] - ste_origin[0]),
-                          height_check:j + int(ste_shp[1] - ste_origin[1])]
-                shp = overlap.shape
+    def closing(self, source_img_data, mask):
+        source_img_data = np.asarray(source_img_data)
+        mask_array = np.asarray(mask)
+        mask_shape = mask_array.shape
+        result_img = np.zeros((source_img_data.shape[0], source_img_data.shape[1]))
+        mask_pad = ((mask_array.shape[0] - 1) / 2, (mask_array.shape[1] - 1) / 2)
+        for i in range(len(source_img_data)):
+            for j in range(len(source_img_data[0])):
+                width_check = int(self.idx_check(i - mask_pad[0]))
+                height_check = int(self.idx_check(j - mask_pad[1]))
+                process_data = source_img_data[width_check:i + int(mask_shape[0] - mask_pad[0]),
+                               height_check:j + int(mask_shape[1] - mask_pad[1])]
+                data_shape = process_data.shape
 
-                ste_first_row_idx = int(np.fabs(i - ste_origin[0])) if i - ste_origin[0] < 0 else 0
-                ste_first_col_idx = int(np.fabs(j - ste_origin[1])) if j - ste_origin[1] < 0 else 0
+                mask_first_row = int(np.fabs(i - mask_pad[0])) if i - mask_pad[0] < 0 else 0
+                mask_first_col = int(np.fabs(j - mask_pad[1])) if j - mask_pad[1] < 0 else 0
 
-                ste_last_row_idx = ste_shp[0] - 1 - (
-                        i + (ste_shp[0] - ste_origin[0]) - binary_img_matrix.shape[0]) if i + (
-                        ste_shp[0] - ste_origin[0]) > binary_img_matrix.shape[0] else ste_shp[0] - 1
-                ste_last_col_idx = ste_shp[1] - 1 - (
-                        j + (ste_shp[1] - ste_origin[1]) - binary_img_matrix.shape[1]) if j + (
-                        ste_shp[1] - ste_origin[1]) > binary_img_matrix.shape[1] else ste_shp[1] - 1
+                mask_last_row = mask_shape[0] - 1 - (
+                        i + (mask_shape[0] - mask_pad[0]) - source_img_data.shape[0]) if i + (
+                        mask_shape[0] - mask_pad[0]) > source_img_data.shape[0] else mask_shape[0] - 1
+                mask_last_col = mask_shape[1] - 1 - (
+                        j + (mask_shape[1] - mask_pad[1]) - source_img_data.shape[1]) if j + (
+                        mask_shape[1] - mask_pad[1]) > source_img_data.shape[1] else mask_shape[1] - 1
 
-                if shp[0] != 0 and shp[1] != 0 and np.logical_and(
-                        structuring_element[int(ste_first_row_idx):int(ste_last_row_idx + 1),
-                        int(ste_first_col_idx):int(ste_last_col_idx + 1)], overlap).any():
-                    dilated_img[i, j] = 1
+                if data_shape[0] != 0 and data_shape[1] != 0 and np.logical_and(
+                        mask_array[int(mask_first_row):int(mask_last_row + 1),
+                        int(mask_first_col):int(mask_last_col + 1)], process_data).any():
+                    result_img[i, j] = 1
 
-        binary_img_matrix = np.asarray(dilated_img)
-        eroded_img = np.zeros((binary_img_matrix.shape[0], binary_img_matrix.shape[1]))
-        ste_origin = (
-            int(np.ceil((structuring_element.shape[0] - 1) / 2.0)),
-            int(np.ceil((structuring_element.shape[1] - 1) / 2.0)))
-        for i in range(len(binary_img_matrix)):
-            for j in range(len(binary_img_matrix[0])):
-                width_check = int(self.idx_check(i - ste_origin[0]))
-                height_check = int(self.idx_check(j - ste_origin[1]))
-                overlap = binary_img_matrix[width_check:i + int(ste_shp[0] - ste_origin[0]),
-                          height_check:j + int(ste_shp[1] - ste_origin[1])]
-                shp = overlap.shape
-                ste_first_row_idx = int(np.fabs(i - ste_origin[0])) if i - ste_origin[0] < 0 else 0
-                ste_first_col_idx = int(np.fabs(j - ste_origin[1])) if j - ste_origin[1] < 0 else 0
+        source_img_data = np.asarray(result_img)
+        closing_img = np.zeros((source_img_data.shape[0], source_img_data.shape[1]))
+        mask_pad = (
+            int(np.ceil((mask_array.shape[0] - 1) / 2.0)),
+            int(np.ceil((mask_array.shape[1] - 1) / 2.0)))
+        for i in range(len(source_img_data)):
+            for j in range(len(source_img_data[0])):
+                width_check = int(self.idx_check(i - mask_pad[0]))
+                height_check = int(self.idx_check(j - mask_pad[1]))
+                process_data = source_img_data[width_check:i + int(mask_shape[0] - mask_pad[0]),
+                               height_check:j + int(mask_shape[1] - mask_pad[1])]
+                data_shape = process_data.shape
+                mask_first_row = int(np.fabs(i - mask_pad[0])) if i - mask_pad[0] < 0 else 0
+                mask_first_col = int(np.fabs(j - mask_pad[1])) if j - mask_pad[1] < 0 else 0
 
-                ste_last_row_idx = ste_shp[0] - 1 - (
-                        i + (ste_shp[0] - ste_origin[0]) - binary_img_matrix.shape[0]) if i + (
-                        ste_shp[0] - ste_origin[0]) > binary_img_matrix.shape[0] else ste_shp[0] - 1
-                ste_last_col_idx = ste_shp[1] - 1 - (
-                        j + (ste_shp[1] - ste_origin[1]) - binary_img_matrix.shape[1]) if j + (
-                        ste_shp[1] - ste_origin[1]) > binary_img_matrix.shape[1] else ste_shp[1] - 1
+                mask_last_row = mask_shape[0] - 1 - (
+                        i + (mask_shape[0] - mask_pad[0]) - source_img_data.shape[0]) if i + (
+                        mask_shape[0] - mask_pad[0]) > source_img_data.shape[0] else mask_shape[0] - 1
+                mask_last_col = mask_shape[1] - 1 - (
+                        j + (mask_shape[1] - mask_pad[1]) - source_img_data.shape[1]) if j + (
+                        mask_shape[1] - mask_pad[1]) > source_img_data.shape[1] else mask_shape[1] - 1
 
-                if shp[0] != 0 and shp[1] != 0 and np.array_equal(
-                        np.logical_and(overlap, structuring_element[ste_first_row_idx:ste_last_row_idx + 1,
-                                                ste_first_col_idx:ste_last_col_idx + 1]),
-                        structuring_element[ste_first_row_idx:ste_last_row_idx + 1,
-                        ste_first_col_idx:ste_last_col_idx + 1]):
-                    eroded_img[i, j] = 1
+                if data_shape[0] != 0 and data_shape[1] != 0 and np.array_equal(
+                        np.logical_and(process_data, mask_array[mask_first_row:mask_last_row + 1,
+                                                     mask_first_col:mask_last_col + 1]),
+                        mask_array[mask_first_row:mask_last_row + 1,
+                        mask_first_col:mask_last_col + 1]):
+                    closing_img[i, j] = 1
 
         path = "out/morphology.jpg"
-        cv2.imwrite(path, eroded_img * 255)
+        cv2.imwrite(path, closing_img * 255)
         self.setPhotoFromPath(path)
 
     def mean_iterative(self, isReturn=False):
