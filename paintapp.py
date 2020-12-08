@@ -892,23 +892,17 @@ class Window(QMainWindow):
         for i in range(4):
             ou1 = self.erosion(I,B1,True)
             ou2 = self.erosion(I2,B2,True)
-            # ou1 = self.Dilation_Erosion('Ero', structuring_element=B1, inp=I, ret=True)
-            # ou2 = self.Dilation_Erosion('Ero', structuring_element=B2, inp=I2, ret=True)
 
-            output = np.logical_and(ou1, ou2)
-            output = output.astype(np.uint8)
+            output = np.logical_and(ou1, ou2).astype(np.uint8)
             output[output > 0] = 255
 
             I = I - output
             I2 = np.invert(I)
 
-            ou1 = self.erosion(I, B1, True)
-            ou2 = self.erosion(I2, B2, True)
-            # ou1 = self.Dilation_Erosion('Ero', structuring_element=A1, inp=I, ret=True)
-            # ou2 = self.Dilation_Erosion('Ero', structuring_element=A2, inp=I2, ret=True)
+            ou1 = self.erosion(I, A1, True)
+            ou2 = self.erosion(I2, A2, True)
 
-            output = np.logical_and(ou1, ou2)
-            output = output.astype(np.uint8)
+            output = np.logical_and(ou1, ou2).astype(np.uint8)
             output[output > 0] = 255
 
             I = I - output
@@ -941,21 +935,21 @@ class Window(QMainWindow):
         for i in range(4):
             ou1 = self.erosion(I, B1, True)
             ou2 = self.erosion(I2, B2, True)
-            # ou1 = self.Dilation_Erosion('Ero', structuring_element=B1, inp=I, ret=True)
-            # ou2 = self.Dilation_Erosion('Ero', structuring_element=B2, inp=I2, ret=True)
-            output = np.logical_and(ou1, ou2)
-            output = output.astype(np.uint8)
-            output[output>0] = 255
+
+            output = np.logical_and(ou1, ou2).astype(np.uint8)
+            output[output > 0] = 255
+
             I = I + output
             I2 = np.invert(I)
+
             ou1 = self.erosion(I, A1, True)
             ou2 = self.erosion(I2, A2, True)
-            # ou1 = self.Dilation_Erosion('Ero', structuring_element=A1, inp=I, ret=True)
-            # ou2 = self.Dilation_Erosion('Ero', structuring_element=A2, inp=I2, ret=True)
-            output = np.logical_and(ou1, ou2)
-            output = output.astype(np.uint8)
+
+            output = np.logical_and(ou1, ou2).astype(np.uint8)
             output[output > 0] = 255
+
             I = I + output
+
             I2 = np.invert(I)
             B1 = np.rot90(B1)
             B2 = np.rot90(B2)
