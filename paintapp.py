@@ -405,7 +405,8 @@ class Window(QMainWindow):
         self.morphology_select_box.addItem("Erosion")
         self.morphology_select_box.addItem("Opening")
         self.morphology_select_box.addItem("Closing")
-        self.morphology_select_box.addItem("Hit-or-miss")
+        self.morphology_select_box.addItem("Hit-or-miss thin")
+        self.morphology_select_box.addItem("Hit-or-miss thick")
 
         self.photo_analyze_select_box = QComboBox(self)
         self.photo_analyze_select_box.setGeometry(620, 620, 100, 30)
@@ -601,7 +602,7 @@ class Window(QMainWindow):
         cv2.imwrite(path, result_img * 255)
         self.setPhotoFromPath(path)
 
-    def erosion(self, source_img_data, mask):
+    def erosion(self, source_img_data, mask, returnErosion=None):
         source_img_data = np.asarray(source_img_data)
         mask_array = np.asarray(mask)
         mask_shape = mask_array.shape
@@ -633,6 +634,8 @@ class Window(QMainWindow):
                         mask_first_col:mask_last_col + 1]):
                     result_img[i, j] = 1
 
+        if returnErosion == True:
+            return result_img
         path = "out/morphology.jpg"
         cv2.imwrite(path, result_img * 255)
         self.setPhotoFromPath(path)
@@ -833,6 +836,136 @@ class Window(QMainWindow):
         threshold_img.save("out/mis_threshold.jpg")
         self.setPhotoFromPath("out/mis_threshold.jpg")
 
+    def Dilation_Erosion(self, mode, structuring_element=None, inp=None, ret=False):
+        if inp is None:
+            ret, I = cv2.threshold(self.cv_im, 127, 255, cv2.THRESH_BINARY)
+        else:
+            I = inp
+        if structuring_element is None:
+            se = np.ones((5, 5), np.uint8)
+        else:
+            se = structuring_element
+        p, q = se.shape
+        In = np.zeros((I.shape[0], I.shape[1]))
+        ox, oy = (math.ceil((p - 1) / 2), math.ceil((p - 1) / 2))
+
+        for i in range(len(I)):
+            for j in range(len(I[0])):
+                op = I[self.idx_check(i - ox): i + (p - ox), self.idx_check(j - oy): j + (q - oy)]
+                sp = op.shape
+                frs_row_idx = int(np.fabs(i - ox)) if i - ox < 0 else 0
+                frs_col_idx = int(np.fabs(j - oy)) if j - oy < 0 else 0
+
+                lst_row_idx = p - 1 - (i + (p - ox) - I.shape[0]) if i + (p - ox) > I.shape[0] else p - 1
+                lst_col_idx = q - 1 - (j + (q - oy) - I.shape[1]) if j + (q - oy) > I.shape[1] else q - 1
+
+                if mode == 'Dil':
+                    if sp[0] != 0 and sp[1] != 0 and np.logical_and(se[frs_row_idx:lst_row_idx + 1,
+                                                                    frs_col_idx: lst_col_idx + 1], op).any():
+                        In[i, j] = 255
+                elif mode == 'Ero':
+                    if sp[0] != 0 and sp[1] != 0 and np.array_equal(np.logical_and(op, se[frs_row_idx:lst_row_idx + 1,
+                                                                                       frs_col_idx:lst_col_idx + 1]),
+                                                                    se[frs_row_idx:lst_row_idx + 1,
+                                                                    frs_col_idx:lst_col_idx + 1]):
+                        In[i, j] = 255
+
+        if ret:
+            return In
+
+    def hit_miss_thin(self, array):
+        I = np.array(array)
+        I2 = np.invert(I)
+        B1 = np.array([[0, 0, 0],
+                       [0, 1, 0],
+                       [1, 1, 1]], int)
+        B2 = np.array([[1, 1, 1],
+                       [0, 0, 0],
+                       [0, 0, 0]], int)
+        A1 = np.array([[0, 0, 0],
+                       [1, 1, 0],
+                       [0, 1, 0]])
+        A2 = np.array([[0, 1, 1],
+                       [0, 0, 1],
+                       [0, 0, 0]])
+
+        for i in range(4):
+            ou1 = self.erosion(I,B1,True)
+            ou2 = self.erosion(I2,B2,True)
+            # ou1 = self.Dilation_Erosion('Ero', structuring_element=B1, inp=I, ret=True)
+            # ou2 = self.Dilation_Erosion('Ero', structuring_element=B2, inp=I2, ret=True)
+
+            output = np.logical_and(ou1, ou2)
+            output = output.astype(np.uint8)
+            output[output > 0] = 255
+
+            I = I - output
+            I2 = np.invert(I)
+
+            ou1 = self.erosion(I, B1, True)
+            ou2 = self.erosion(I2, B2, True)
+            # ou1 = self.Dilation_Erosion('Ero', structuring_element=A1, inp=I, ret=True)
+            # ou2 = self.Dilation_Erosion('Ero', structuring_element=A2, inp=I2, ret=True)
+
+            output = np.logical_and(ou1, ou2)
+            output = output.astype(np.uint8)
+            output[output > 0] = 255
+
+            I = I - output
+
+            I2 = np.invert(I)
+            B1 = np.rot90(B1)
+            B2 = np.rot90(B2)
+            A1 = np.rot90(A1)
+            A2 = np.rot90(A2)
+
+        path = "out/thin.jpg"
+        cv2.imwrite(path, I)
+        self.setPhotoFromPath(path)
+
+    def hit_miss_thick(self, array):
+        I = np.array(array)
+        I2 = np.invert(I)
+        B1 = np.array([[1, 1, 0],
+                       [1, 0, 0],
+                       [1, 0, 0]], int)
+        B2 = np.array([[0, 0, 0],
+                       [0, 1, 0],
+                       [0, 0, 1]], int)
+        A1 = np.array([[0, 1, 1],
+                       [0, 0, 1],
+                       [0, 0, 1]])
+        A2 = np.array([[0, 0, 0],
+                       [0, 1, 0],
+                       [1, 0, 0]])
+        for i in range(4):
+            ou1 = self.erosion(I, B1, True)
+            ou2 = self.erosion(I2, B2, True)
+            # ou1 = self.Dilation_Erosion('Ero', structuring_element=B1, inp=I, ret=True)
+            # ou2 = self.Dilation_Erosion('Ero', structuring_element=B2, inp=I2, ret=True)
+            output = np.logical_and(ou1, ou2)
+            output = output.astype(np.uint8)
+            output[output>0] = 255
+            I = I + output
+            I2 = np.invert(I)
+            ou1 = self.erosion(I, A1, True)
+            ou2 = self.erosion(I2, A2, True)
+            # ou1 = self.Dilation_Erosion('Ero', structuring_element=A1, inp=I, ret=True)
+            # ou2 = self.Dilation_Erosion('Ero', structuring_element=A2, inp=I2, ret=True)
+            output = np.logical_and(ou1, ou2)
+            output = output.astype(np.uint8)
+            output[output > 0] = 255
+            I = I + output
+            I2 = np.invert(I)
+            B1 = np.rot90(B1)
+            B2 = np.rot90(B2)
+            A1 = np.rot90(A1)
+            A2 = np.rot90(A2)
+
+        path = "out/thick.jpg"
+        cv2.imwrite(path, I)
+        self.setPhotoFromPath(path)
+
     def apply_morphology(self):
         index = int(self.morphology_select_box.currentIndex())
         path = self.path_label.text()
@@ -841,7 +974,7 @@ class Window(QMainWindow):
             self.turn_grayscale()
             binary_array = self.mean_iterative(True)
             mask = np.ones((3, 3))
-            print(binary_array)
+
             if index == 0:
                 self.dilation(binary_array, mask)
             elif index == 1:
@@ -851,7 +984,9 @@ class Window(QMainWindow):
             elif index == 3:
                 self.closing(binary_array, mask)
             elif index == 4:
-                print("hir or miss")
+                self.hit_miss_thin(binary_array)
+            elif index == 5:
+                self.hit_miss_thick(binary_array)
         else:
             msg = QMessageBox()
             msg.setIcon(QMessageBox.Warning)
